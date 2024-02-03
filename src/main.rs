@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
     println!("Hello, world!");
     let mut scheduler = AsyncScheduler::new();
 
-    scheduler.every(1.minute()).run(check_sources);
+    scheduler.every(1.hour()).run(check_sources);
     tokio::spawn(async move {
         loop {
             scheduler.run_pending().await;
