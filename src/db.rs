@@ -1,6 +1,23 @@
 use std::env;
 
 use libsql_client::Client;
+use serde_json::Value;
+
+pub trait ToSerdeJsonValue {
+    fn convert(self) -> Value;
+}
+
+impl ToSerdeJsonValue for libsql_client::Value {
+    fn convert(self) -> Value {
+        match self {
+            libsql_client::Value::Null => Value::Null,
+            libsql_client::Value::Integer { value } => value.into(),
+            libsql_client::Value::Float { value } => value.into(),
+            libsql_client::Value::Text { value } => value.into(),
+            libsql_client::Value::Blob { value } => value.into_iter().collect(),
+        }
+    }
+}
 
 pub async fn establish_connection() -> Client {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");

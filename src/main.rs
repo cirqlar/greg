@@ -1,73 +1,27 @@
 use std::time::Duration;
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    web::{self, scope},
+    App, HttpServer,
+};
+use actix_web_lab::web::spa;
 use clokwerk::{AsyncScheduler, TimeUnits};
 use dotenvy::dotenv;
-use greg::db;
-use libsql_client::Client;
+use greg::{
+    db::{self},
+    routes::{
+        gets::{get_activity, get_sources},
+        posts::{add_source, recheck},
+    },
+    tasks::check_sources::check_sources,
+    types::AppState,
+};
 use tokio::sync::Mutex;
-
-#[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok().body("Index")
-}
-
-#[derive(serde::Deserialize)]
-struct LoginInfo {
-    password: String,
-}
-
-#[post("/login")]
-async fn login(info: web::Json<LoginInfo>) -> impl Responder {
-    format!("Your password is {}", info.password)
-}
-
-#[get("/sources")]
-async fn get_sources(data: web::Data<AppState>) -> impl Responder {
-    let db_handle = data.db_handle.lock().await;
-    let _result = db_handle.execute("SELECT * FROM sources").await.unwrap();
-    HttpResponse::Ok().body("Sources")
-}
-
-#[get("/activity")]
-async fn get_activity(data: web::Data<AppState>) -> impl Responder {
-    let db_handle = data.db_handle.lock().await;
-    let _result = db_handle.execute("SELECT * FROM sources").await.unwrap();
-    HttpResponse::Ok().body("Activity")
-}
-
-#[derive(serde::Deserialize)]
-struct Source {
-    url: String,
-}
-
-#[post("/source/new")]
-async fn add_source(source: web::Json<Source>) -> impl Responder {
-    format!("New source is {}", source.url)
-}
-
-#[post("/recheck")]
-async fn recheck() -> impl Responder {
-    check_sources().await;
-    HttpResponse::Ok().body("Recheck")
-}
-
-async fn check_sources_task() {
-    check_sources().await
-}
-
-async fn check_sources() {
-    println!("Checking Sources");
-}
-
-struct AppState {
-    db_handle: Mutex<Client>,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
-    println!("Hello, world!");
+
     let client = db::establish_connection().await;
     db::migrate_db(&client).await?;
 
@@ -76,8 +30,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let mut scheduler = AsyncScheduler::new();
-
-    scheduler.every(1.hour()).run(check_sources_task);
+    scheduler.every(1.hour()).run(check_sources);
     tokio::spawn(async move {
         loop {
             scheduler.run_pending().await;
@@ -88,12 +41,20 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
-            .service(index)
-            .service(login)
-            .service(get_sources)
-            .service(get_activity)
-            .service(add_source)
-            .service(recheck)
+            .service(
+                scope("/api")
+                    .service(get_sources)
+                    .service(get_activity)
+                    .service(add_source)
+                    .service(recheck),
+            )
+            .service(
+                spa()
+                    .index_file("./dist/index.html")
+                    .static_resources_mount("/")
+                    .static_resources_location("./dist")
+                    .finish(),
+            )
     })
     .bind(("127.0.0.1", 8080))?
     .run()
