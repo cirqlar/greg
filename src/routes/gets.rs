@@ -1,35 +1,30 @@
 use crate::{
-    db::ToSerdeJsonValue,
-    types::{Activity, AppState, Failure, Source, LOGGED_IN, LOGGED_IN_VALUE},
-    utils::return_password_error,
+    types::{Activity, AppState, Failure, FromRow, Source},
+    utils::{is_logged_in, return_password_error},
 };
 
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use serde::{de::value::MapDeserializer, Deserialize};
+use libsql_client::Client;
+
+pub async fn get_sources_inner(db_handle: &Client) -> Result<Vec<Source>, anyhow::Error> {
+    let result = db_handle.execute("SELECT * FROM sources").await?;
+
+    let sources = result
+        .rows
+        .into_iter()
+        .map(Source::from_row)
+        .collect::<Vec<_>>();
+
+    Ok(sources)
+}
 
 #[get("/sources")]
 async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    if req.cookie(LOGGED_IN).is_some() && req.cookie(LOGGED_IN).unwrap().value() == LOGGED_IN_VALUE
-    {
-        let db_handle = data.db_handle.lock().await;
-        let result = db_handle.execute("SELECT * FROM sources").await;
-        match result {
-            Ok(success) => {
-                let sources = success
-                    .rows
-                    .into_iter()
-                    .filter_map(|row| {
-                        Source::deserialize(MapDeserializer::new(
-                            row.value_map
-                                .into_iter()
-                                .map(|(key, value)| (key, value.convert())),
-                        ))
-                        .ok()
-                    })
-                    .collect::<Vec<_>>();
+    let db_handle = data.db_handle.lock().await;
 
-                HttpResponse::Ok().json(sources)
-            }
+    if is_logged_in(&req, &db_handle).await {
+        match get_sources_inner(&db_handle).await {
+            Ok(sources) => HttpResponse::Ok().json(sources),
             Err(failure) => HttpResponse::InternalServerError().json(Failure {
                 error: format!("Couldn't get sources. Err: {}", failure),
             }),
@@ -41,23 +36,16 @@ async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Respon
 
 #[get("/activity")]
 async fn get_activity(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    if req.cookie(LOGGED_IN).is_some() && req.cookie(LOGGED_IN).unwrap().value() == LOGGED_IN_VALUE
-    {
-        let db_handle = data.db_handle.lock().await;
+    let db_handle = data.db_handle.lock().await;
+
+    if is_logged_in(&req, &db_handle).await {
         let result = db_handle.execute("SELECT * FROM activities").await;
         match result {
             Ok(success) => {
                 let activities = success
                     .rows
                     .into_iter()
-                    .filter_map(|row| {
-                        Activity::deserialize(MapDeserializer::new(
-                            row.value_map
-                                .into_iter()
-                                .map(|(key, value)| (key, value.convert())),
-                        ))
-                        .ok()
-                    })
+                    .map(Activity::from_row)
                     .collect::<Vec<_>>();
 
                 HttpResponse::Ok().json(activities)

@@ -1,20 +1,38 @@
 use std::env;
 
 use crate::{
-    db::ToSerdeJsonValue,
     tasks::check_sources::check_sources,
-    types::{AddSource, AppState, Failure, LoginInfo, Source, Success, LOGGED_IN, LOGGED_IN_VALUE},
-    utils::return_password_error,
+    types::{AddSource, AppState, Failure, FromRow, LoginInfo, Source, Success, LOGGED_IN_COOKIE},
+    utils::{is_logged_in, return_password_error},
 };
 use actix_web::{cookie::Cookie, post, web, HttpRequest, HttpResponse, Responder};
 use libsql_client::{args, Statement};
-use serde::{de::value::MapDeserializer, Deserialize};
 use time::OffsetDateTime;
+use tokio::runtime::Handle;
+use uuid::Uuid;
 
 #[post("/login")]
-async fn login(login_info: web::Json<LoginInfo>) -> impl Responder {
+async fn login(login_info: web::Json<LoginInfo>, data: web::Data<AppState>) -> impl Responder {
     if env::var("PASSWORD").expect("PASSWORD should be set") == login_info.password {
-        let c = Cookie::build(LOGGED_IN, LOGGED_IN_VALUE)
+        let id = Uuid::new_v4();
+
+        let db_handle = data.db_handle.lock().await;
+        let Ok(_result) = db_handle
+            .execute(Statement::with_args(
+                "INSERT INTO logins (timestamp, key) VALUES (?, ?)",
+                args!(
+                    serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+                    id.to_string(),
+                ),
+            ))
+            .await
+        else {
+            return HttpResponse::InternalServerError().json(Failure {
+                error: "Issue logging in".into(),
+            });
+        };
+
+        let c = Cookie::build(LOGGED_IN_COOKIE, id.to_string())
             .path("/")
             .secure(true)
             .http_only(true)
@@ -30,9 +48,16 @@ async fn login(login_info: web::Json<LoginInfo>) -> impl Responder {
 }
 
 #[post("/recheck")]
-async fn recheck() -> impl Responder {
-    check_sources().await;
-    HttpResponse::Ok().body("Recheck")
+async fn recheck(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+    let db_handle = data.db_handle.lock().await;
+
+    if is_logged_in(&req, &db_handle).await {
+        let rt = Handle::current();
+        check_sources(rt, &data);
+        HttpResponse::Ok().body("Recheck")
+    } else {
+        return_password_error()
+    }
 }
 
 #[post("/source/new")]
@@ -41,9 +66,9 @@ pub async fn add_source(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    if req.cookie(LOGGED_IN).is_some() && req.cookie(LOGGED_IN).unwrap().value() == LOGGED_IN_VALUE
-    {
-        let db_handle = data.db_handle.lock().await;
+    let db_handle = data.db_handle.lock().await;
+
+    if is_logged_in(&req, &db_handle).await {
         let result = db_handle
             .execute(Statement::with_args(
                 "INSERT INTO sources (url, last_checked) VALUES (?, ?)",
@@ -55,16 +80,7 @@ pub async fn add_source(
             .await;
         match result {
             Ok(mut success) => {
-                let source_map = success.rows.remove(0).value_map;
-                let Ok(source_value) = Source::deserialize(MapDeserializer::new(
-                    source_map
-                        .into_iter()
-                        .map(|(key, val)| (key, val.convert())),
-                )) else {
-                    return HttpResponse::InternalServerError().json(Failure {
-                        error: "Error returning source".into(),
-                    });
-                };
+                let source_value = Source::from_row(success.rows.remove(0));
                 HttpResponse::Ok().json(source_value)
             }
             Err(failure) => HttpResponse::InternalServerError().json(Failure {

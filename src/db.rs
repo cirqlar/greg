@@ -33,23 +33,25 @@ pub async fn establish_connection() -> Client {
 
 pub async fn migrate_db(client: &Client) -> anyhow::Result<()> {
     let _result = client
-        .execute(
+        .batch([
             "CREATE TABLE IF NOT EXISTS `sources`(
                 `id` INTEGER NOT NULL PRIMARY KEY,
                 `url` TEXT NOT NULL,
                 `last_checked` TEXT NOT NULL
             );",
-        )
-        .await?;
-    let _result = client
-        .execute(
             "CREATE TABLE IF NOT EXISTS `activities`(
                 `id` INTEGER NOT NULL PRIMARY KEY,
                 `source_id` INTEGER NOT NULL,
                 `post_url` TEXT NOT NULL,
                 `timestamp` TEXT NOT NULL
             );",
-        )
+            "CREATE TABLE IF NOT EXISTS `logins`(
+                `id` INTEGER NOT NULL PRIMARY KEY,
+                `timestamp` TEXT NOT NULL,
+                `key` TEXT NOT NULL UNIQUE
+            );",
+            "CREATE INDEX idx_key ON logins (key)",
+        ])
         .await?;
 
     Ok(())
