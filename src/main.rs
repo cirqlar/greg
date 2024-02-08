@@ -26,18 +26,18 @@ async fn main() -> anyhow::Result<()> {
     let app_state = web::Data::new(AppState {
         db_handle: Mutex::new(client),
     });
-    // let data = app_state.clone();
+    let data = app_state.clone();
 
-    // let scheduler = JobScheduler::new().await?;
+    let scheduler = JobScheduler::new().await?;
 
-    // let rt = Handle::current();
-    // let ourdata = data.clone();
-    // scheduler
-    //     .add(Job::new("0 0 * * * *", move |_uuid, _l| {
-    //         check_sources(rt.clone(), &ourdata);
-    //     })?)
-    //     .await?;
-    // scheduler.start().await?;
+    let rt = Handle::current();
+    let ourdata = data.clone();
+    scheduler
+        .add(Job::new("0 0 * * * *", move |_uuid, _l| {
+            check_sources(rt.clone(), &ourdata);
+        })?)
+        .await?;
+    scheduler.start().await?;
 
     HttpServer::new(move || {
         App::new()
