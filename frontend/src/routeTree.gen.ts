@@ -11,25 +11,31 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as SourcesImport } from './routes/sources'
-import { Route as ActivityImport } from './routes/activity'
+import { Route as LayoutImport } from './routes/_layout'
 import { Route as IndexImport } from './routes/index'
+import { Route as LayoutSourcesImport } from './routes/_layout.sources'
+import { Route as LayoutActivityImport } from './routes/_layout.activity'
 
 // Create/Update Routes
 
-const SourcesRoute = SourcesImport.update({
-  path: '/sources',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const ActivityRoute = ActivityImport.update({
-  path: '/activity',
+const LayoutRoute = LayoutImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRoute,
 } as any)
 
 const IndexRoute = IndexImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const LayoutSourcesRoute = LayoutSourcesImport.update({
+  path: '/sources',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutActivityRoute = LayoutActivityImport.update({
+  path: '/activity',
+  getParentRoute: () => LayoutRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -40,13 +46,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/activity': {
-      preLoaderRoute: typeof ActivityImport
+    '/_layout': {
+      preLoaderRoute: typeof LayoutImport
       parentRoute: typeof rootRoute
     }
-    '/sources': {
-      preLoaderRoute: typeof SourcesImport
-      parentRoute: typeof rootRoute
+    '/_layout/activity': {
+      preLoaderRoute: typeof LayoutActivityImport
+      parentRoute: typeof LayoutImport
+    }
+    '/_layout/sources': {
+      preLoaderRoute: typeof LayoutSourcesImport
+      parentRoute: typeof LayoutImport
     }
   }
 }
@@ -55,8 +65,7 @@ declare module '@tanstack/react-router' {
 
 export const routeTree = rootRoute.addChildren([
   IndexRoute,
-  ActivityRoute,
-  SourcesRoute,
+  LayoutRoute.addChildren([LayoutActivityRoute, LayoutSourcesRoute]),
 ])
 
 /* prettier-ignore-end */

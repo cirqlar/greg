@@ -1,5 +1,5 @@
 use actix_web::web;
-use rss::Channel;
+use feed_rs::parser;
 use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 use tokio::runtime::Handle;
 
@@ -25,11 +25,11 @@ pub fn check_sources(rt: Handle, app_data: &web::Data<AppState>) {
                         let Ok(content) = res.bytes().await else {
                             return;
                         };
-                        let Ok(channel) = Channel::read_from(&content[..]) else {
+                        let Ok(channel) = parser::parse(&(content)[..]) else {
                             return;
                         };
                         let Ok(pubtime) =
-                            OffsetDateTime::parse(channel.last_build_date().unwrap(), &Rfc2822)
+                            OffsetDateTime::parse(&channel.updated.unwrap().to_rfc2822(), &Rfc2822)
                         else {
                             return;
                         };

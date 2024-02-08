@@ -1,4 +1,5 @@
 use actix_web::{
+    middleware::Logger,
     web::{self, scope},
     App, HttpServer,
 };
@@ -13,15 +14,20 @@ use greg::{
     tasks::check_sources::check_sources,
     types::AppState,
 };
+use log::info;
 use tokio::{runtime::Handle, sync::Mutex};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    info!("Connecting to Database");
     let client = db::establish_connection().await;
+    info!("Connected to Database");
     db::migrate_db(&client).await?;
+    info!("Migrated Database");
 
     let app_state = web::Data::new(AppState {
         db_handle: Mutex::new(client),
@@ -37,10 +43,13 @@ async fn main() -> anyhow::Result<()> {
             check_sources(rt.clone(), &ourdata);
         })?)
         .await?;
+    info!("Initialized Scheduler");
     scheduler.start().await?;
+    info!("Scheduler Started");
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .app_data(app_state.clone())
             .service(
                 scope("/api")
