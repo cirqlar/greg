@@ -28,7 +28,7 @@ async fn login(login_info: web::Json<LoginInfo>, data: web::Data<AppState>) -> i
             .await
         else {
             return HttpResponse::InternalServerError().json(Failure {
-                error: "Issue logging in".into(),
+                message: "Issue logging in".into(),
             });
         };
 
@@ -84,7 +84,7 @@ pub async fn add_source(
                 HttpResponse::Ok().json(source_value)
             }
             Err(failure) => HttpResponse::InternalServerError().json(Failure {
-                error: format!("Couldn't add source. Err: {}", failure),
+                message: format!("Couldn't add source. Err: {}", failure),
             }),
         }
     } else {

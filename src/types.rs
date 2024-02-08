@@ -79,7 +79,7 @@ pub struct Success {
 
 #[derive(Serialize)]
 pub struct Failure {
-    pub error: String,
+    pub message: String,
 }
 
 pub struct AppState {

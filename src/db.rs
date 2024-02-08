@@ -50,7 +50,7 @@ pub async fn migrate_db(client: &Client) -> anyhow::Result<()> {
                 `timestamp` TEXT NOT NULL,
                 `key` TEXT NOT NULL UNIQUE
             );",
-            "CREATE INDEX idx_key ON logins (key)",
+            "CREATE INDEX IF NOT EXISTS idx_key ON logins (key)",
         ])
         .await?;
 

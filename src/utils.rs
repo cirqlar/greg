@@ -7,7 +7,7 @@ use crate::types::{Failure, LOGGED_IN_COOKIE};
 
 pub fn return_password_error() -> HttpResponse {
     HttpResponse::Unauthorized().json(Failure {
-        error: "Wrong password".into(),
+        message: "Wrong password".into(),
     })
 }
 

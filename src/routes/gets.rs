@@ -26,7 +26,7 @@ async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Respon
         match get_sources_inner(&db_handle).await {
             Ok(sources) => HttpResponse::Ok().json(sources),
             Err(failure) => HttpResponse::InternalServerError().json(Failure {
-                error: format!("Couldn't get sources. Err: {}", failure),
+                message: format!("Couldn't get sources. Err: {}", failure),
             }),
         }
     } else {
@@ -51,7 +51,7 @@ async fn get_activity(data: web::Data<AppState>, req: HttpRequest) -> impl Respo
                 HttpResponse::Ok().json(activities)
             }
             Err(failure) => HttpResponse::InternalServerError().json(Failure {
-                error: format!("Couldn't get activities. Err: {}", failure),
+                message: format!("Couldn't get activities. Err: {}", failure),
             }),
         }
     } else {
