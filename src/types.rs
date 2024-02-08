@@ -7,8 +7,8 @@ pub const LOGGED_IN_COOKIE: &str = "logged_in";
 
 // DB Types
 
-pub trait FromRow {
-    fn from_row(row: Row) -> Self;
+pub trait FromRow: std::marker::Sized {
+    fn from_row(row: Row) -> anyhow::Result<Self>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -19,17 +19,17 @@ pub struct Source {
 }
 
 impl FromRow for Source {
-    fn from_row(row: Row) -> Source {
-        let id: i32 = row.try_column("id").unwrap();
-        let url: &str = row.try_column("url").unwrap();
-        let last_checked_string: &str = row.try_column("last_checked").unwrap();
-        let last_checked: OffsetDateTime = serde_json::from_str(last_checked_string).unwrap();
+    fn from_row(row: Row) -> anyhow::Result<Source> {
+        let id: i32 = row.try_column("id")?;
+        let url: &str = row.try_column("url")?;
+        let last_checked_string: &str = row.try_column("last_checked")?;
+        let last_checked: OffsetDateTime = serde_json::from_str(last_checked_string)?;
 
-        Source {
+        Ok(Source {
             id,
             url: url.into(),
             last_checked,
-        }
+        })
     }
 }
 
@@ -42,19 +42,19 @@ pub struct Activity {
 }
 
 impl FromRow for Activity {
-    fn from_row(row: Row) -> Activity {
-        let id: i32 = row.try_column("id").unwrap();
-        let source_id: i32 = row.try_column("source_id").unwrap();
-        let post_url: &str = row.try_column("post_url").unwrap();
-        let timestamp_string: &str = row.try_column("timestamp").unwrap();
-        let timestamp: OffsetDateTime = serde_json::from_str(timestamp_string).unwrap();
+    fn from_row(row: Row) -> anyhow::Result<Activity> {
+        let id: i32 = row.try_column("id")?;
+        let source_id: i32 = row.try_column("source_id")?;
+        let post_url: &str = row.try_column("post_url")?;
+        let timestamp_string: &str = row.try_column("timestamp")?;
+        let timestamp: OffsetDateTime = serde_json::from_str(timestamp_string)?;
 
-        Activity {
+        Ok(Activity {
             id,
             source_id,
             post_url: post_url.into(),
             timestamp,
-        }
+        })
     }
 }
 

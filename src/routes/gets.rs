@@ -5,14 +5,27 @@ use crate::{
 
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use libsql_client::Client;
+use log::{error, info};
 
-pub async fn get_sources_inner(db_handle: &Client) -> Result<Vec<Source>, anyhow::Error> {
+pub async fn get_sources_inner(db_handle: &Client) -> anyhow::Result<Vec<Source>> {
     let result = db_handle.execute("SELECT * FROM sources").await?;
 
     let sources = result
         .rows
         .into_iter()
-        .map(Source::from_row)
+        .filter_map(|row| {
+            let ret = Source::from_row(row);
+
+            if ret.is_err() {
+                error!(
+                    "[Get Sources Inner] Failed to parse row with err: {}",
+                    ret.err().unwrap()
+                );
+                None
+            } else {
+                ret.ok()
+            }
+        })
         .collect::<Vec<_>>();
 
     Ok(sources)
@@ -23,13 +36,21 @@ async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Respon
     let db_handle = data.db_handle.lock().await;
 
     if is_logged_in(&req, &db_handle).await {
+        info!("[Get Sources] Getting sources from db");
         match get_sources_inner(&db_handle).await {
-            Ok(sources) => HttpResponse::Ok().json(sources),
-            Err(failure) => HttpResponse::InternalServerError().json(Failure {
-                message: format!("Couldn't get sources. Err: {}", failure),
-            }),
+            Ok(sources) => {
+                info!("[Get Sources] Got sources successfully");
+                HttpResponse::Ok().json(sources)
+            }
+            Err(err) => {
+                error!("[Get Sources] Getting sources failed with err: {}", err);
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get sources. Err: {}", err),
+                })
+            }
         }
     } else {
+        error!("[Get Sources] Failed due to auth error");
         return_password_error()
     }
 }
@@ -39,22 +60,40 @@ async fn get_activity(data: web::Data<AppState>, req: HttpRequest) -> impl Respo
     let db_handle = data.db_handle.lock().await;
 
     if is_logged_in(&req, &db_handle).await {
+        info!("[Get Activity] Getting activities from db");
         let result = db_handle.execute("SELECT * FROM activities").await;
         match result {
             Ok(success) => {
                 let activities = success
                     .rows
                     .into_iter()
-                    .map(Activity::from_row)
+                    .filter_map(|row| {
+                        let ret = Activity::from_row(row);
+
+                        if ret.is_err() {
+                            error!(
+                                "[Get Activity] Failed to parse row with err: {}",
+                                ret.err().unwrap()
+                            );
+                            None
+                        } else {
+                            ret.ok()
+                        }
+                    })
                     .collect::<Vec<_>>();
 
+                info!("[Get Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)
             }
-            Err(failure) => HttpResponse::InternalServerError().json(Failure {
-                message: format!("Couldn't get activities. Err: {}", failure),
-            }),
+            Err(err) => {
+                error!("[Get Activity] Getting sources failed with err: {}", err);
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get activities. Err: {}", err),
+                })
+            }
         }
     } else {
+        error!("[Get Activity] Failed due to auth error");
         return_password_error()
     }
 }
