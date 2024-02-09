@@ -1,14 +1,41 @@
 use crate::{
-    types::{Activity, AppState, Failure, FromRow, Source},
+    types::{
+        Activity, AppData, DbReturnReciever, DbReturnSender, Failure, FromRow, Source,
+        LOGGED_IN_COOKIE,
+    },
     utils::{is_logged_in, return_password_error},
 };
 
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use libsql_client::Client;
+use actix_web::{cookie::Cookie, get, HttpRequest, HttpResponse, Responder};
+use libsql_client::Statement;
 use log::{error, info};
+use tokio::sync::mpsc;
 
-pub async fn get_sources_inner(db_handle: &Client) -> anyhow::Result<Vec<Source>> {
-    let result = db_handle.execute("SELECT * FROM sources").await?;
+#[get("/check-logged-in")]
+pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder {
+    let (send, mut recv) = mpsc::channel(100);
+
+    let logged_in = is_logged_in(&req, &data, send, &mut recv).await;
+    let mut res = HttpResponse::Ok();
+    if !logged_in {
+        let mut c = Cookie::build(LOGGED_IN_COOKIE, "").finish();
+        c.make_removal();
+        res.cookie(c);
+    }
+
+    res.json(logged_in)
+}
+
+pub async fn get_sources_inner(
+    data: &AppData,
+    send: DbReturnSender,
+    recv: &mut DbReturnReciever,
+) -> anyhow::Result<Vec<Source>> {
+    let _ = data
+        .db_channel
+        .send((Statement::from("SELECT * FROM sources"), send))
+        .await;
+    let result = recv.recv().await.unwrap()?;
 
     let sources = result
         .rows
@@ -32,12 +59,12 @@ pub async fn get_sources_inner(db_handle: &Client) -> anyhow::Result<Vec<Source>
 }
 
 #[get("/sources")]
-async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    let db_handle = data.db_handle.lock().await;
+pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
+    let (send, mut recv) = mpsc::channel(100);
 
-    if is_logged_in(&req, &db_handle).await {
+    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
         info!("[Get Sources] Getting sources from db");
-        match get_sources_inner(&db_handle).await {
+        match get_sources_inner(&data, send.clone(), &mut recv).await {
             Ok(sources) => {
                 info!("[Get Sources] Got sources successfully");
                 HttpResponse::Ok().json(sources)
@@ -56,12 +83,19 @@ async fn get_sources(data: web::Data<AppState>, req: HttpRequest) -> impl Respon
 }
 
 #[get("/activity")]
-async fn get_activity(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    let db_handle = data.db_handle.lock().await;
+pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
+    let (send, mut recv) = mpsc::channel(100);
 
-    if is_logged_in(&req, &db_handle).await {
+    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
         info!("[Get Activity] Getting activities from db");
-        let result = db_handle.execute("SELECT * FROM activities").await;
+
+        let _ = data
+            .db_channel
+            .send((Statement::from("SELECT * FROM activities"), send.clone()))
+            .await;
+        let Some(result) = recv.recv().await else {
+            unreachable!();
+        };
         match result {
             Ok(success) => {
                 let activities = success

@@ -1,7 +1,8 @@
-use libsql_client::{Client, Row};
+use actix_web::web;
+use libsql_client::{ResultSet, Row, Statement};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use tokio::sync::Mutex;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub const LOGGED_IN_COOKIE: &str = "logged_in";
 
@@ -82,6 +83,14 @@ pub struct Failure {
     pub message: String,
 }
 
+pub type DbReturnSender = Sender<anyhow::Result<ResultSet>>;
+pub type DbReturnReciever = Receiver<anyhow::Result<ResultSet>>;
+pub type DbMesssage = (Statement, DbReturnSender);
+pub type DbSender = Sender<DbMesssage>;
+pub type DbReceiver = Receiver<DbMesssage>;
+
 pub struct AppState {
-    pub db_handle: Mutex<Client>,
+    pub db_channel: DbSender,
 }
+
+pub type AppData = web::Data<AppState>;

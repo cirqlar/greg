@@ -20,9 +20,9 @@ function Sources() {
     mutationFn: (source: { url: string }) =>
       fetch("/api/source/new", {
         method: "POST",
-		headers: {
-			"Content-Type": 'application/json',
-		},
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(source),
       }).then((res) => res.json()),
     onSuccess: () => {
