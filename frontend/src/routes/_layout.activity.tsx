@@ -24,13 +24,13 @@ const columns = [
     cell: (info) => info.getValue(),
   }),
   columnHelper.accessor("post_url", {
-    cell: (info) => <span className="text-wrap whitespace-normal break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words">{info.getValue()}</span>,
   }),
   columnHelper.accessor("source_url", {
-    cell: (info) => <span className="text-wrap whitespace-normal break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words">{info.getValue()}</span>,
   }),
   columnHelper.accessor("timestamp", {
-    cell: (info) => <span className="text-wrap whitespace-normal break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words">{info.getValue()}</span>,
   }),
 ];
 
