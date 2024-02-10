@@ -1,20 +1,47 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import TableGrid from "../components/table-grid";
+
+import style from "../components/table-grid.module.css";
 
 export const Route = createFileRoute("/_layout/sources")({
   component: Sources,
 });
 
+type TSource = { id: string; url: string; last_checked: string };
+const columnHelper = createColumnHelper<TSource>();
+const columns = [
+  columnHelper.accessor("id", {
+    cell: (info) => info.getValue(),
+    header: "ID",
+  }),
+  columnHelper.accessor("url", {
+    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
+    header: "Source",
+  }),
+  columnHelper.accessor("last_checked", {
+    cell: (info) => <span className="break-words">{info.getValue()}</span>,
+    header: "Last Checked"
+  }),
+];
+
 function Sources() {
   const [url, setUrl] = useState("");
   const queryClient = useQueryClient();
-  const sources = useQuery<{ id: string; url: string; last_checked: string }[]>(
+  const sources = useQuery<TSource[]>(
     {
       queryKey: ["sources"],
       queryFn: () => fetch("/api/sources").then((res) => res.json()),
     }
   );
+
+  const table = useReactTable({
+    columns,
+    data: sources.data ?? [],
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   const addSource = useMutation({
     mutationFn: (source: { url: string }) =>
@@ -65,11 +92,53 @@ function Sources() {
         </form>
       </div>
 
-      <div className="max-w-lg mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4">
         <h3 className="text-2xl font-bold mb-4">Sources</h3>
-        <ul>
-          {sources.data?.map((source) => <li key={source.id}>{source.url}</li>)}
-        </ul>
+        <TableGrid className={style.template_3}>
+          <Fragment>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <Fragment key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <div key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </div>
+                ))}
+              </Fragment>
+            ))}
+          </Fragment>
+          <Fragment>
+            {table.getRowModel().rows.map((row) => (
+              <Fragment key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <div key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
+                ))}
+              </Fragment>
+            ))}
+          </Fragment>
+          {/* <tfoot>
+            {table.getFooterGroups().map((footerGroup) => (
+              <tr key={footerGroup.id}>
+                {footerGroup.headers.map((header) => (
+                  <th key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.footer,
+                          header.getContext()
+                        )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </tfoot> */}
+        </TableGrid>
       </div>
     </>
   );

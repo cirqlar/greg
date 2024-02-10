@@ -16,7 +16,7 @@ pub trait FromRow: std::marker::Sized {
 pub struct Source {
     pub id: i32,
     pub url: String,
-    pub last_checked: OffsetDateTime,
+    pub last_checked: String,
 }
 
 impl FromRow for Source {
@@ -25,6 +25,9 @@ impl FromRow for Source {
         let url: &str = row.try_column("url")?;
         let last_checked_string: &str = row.try_column("last_checked")?;
         let last_checked: OffsetDateTime = serde_json::from_str(last_checked_string)?;
+        let last_checked = last_checked
+            .format(&format_description::well_known::Rfc2822)
+            .unwrap();
 
         Ok(Source {
             id,

@@ -7,3 +7,11 @@ html, body, #root {
   width: 100%;
   height: 100%;
 }
+
+a {
+  color: theme(textColor.green.600);
+}
+
+a:hover, a:focus {
+  color: theme(textColor.green.500);
+}

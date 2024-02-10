@@ -7,6 +7,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Fragment, useState } from "react";
+import TableGrid from "../components/table-grid";
 
 export const Route = createFileRoute("/_layout/activity")({
   component: Activity,
@@ -22,15 +23,19 @@ const columnHelper = createColumnHelper<TActivity>();
 const columns = [
   columnHelper.accessor("id", {
     cell: (info) => info.getValue(),
+    header: "ID",
   }),
   columnHelper.accessor("post_url", {
-    cell: (info) => <span className="break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
+    header: "Post",
   }),
   columnHelper.accessor("source_url", {
-    cell: (info) => <span className="break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
+    header: "Source",
   }),
   columnHelper.accessor("timestamp", {
     cell: (info) => <span className="break-words">{info.getValue()}</span>,
+    header: "Checked At"
   }),
 ];
 
@@ -80,9 +85,9 @@ function Activity() {
           Recheck
         </button>
       </div>
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4">
         <h3 className="text-2xl font-bold mb-4">Activity</h3>
-        <div className="max-w-full grid grid-cols-4">
+        <TableGrid>
           <Fragment>
             {table.getHeaderGroups().map((headerGroup) => (
               <Fragment key={headerGroup.id}>
@@ -126,7 +131,7 @@ function Activity() {
               </tr>
             ))}
           </tfoot> */}
-        </div>
+        </TableGrid>
       </div>
     </>
   );

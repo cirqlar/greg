@@ -1,0 +1,7 @@
+.template_4 {
+	grid-template-columns: auto repeat(2, minmax(0, 2fr)) minmax(0, 1fr);
+}
+
+.template_3 {
+	grid-template-columns: auto minmax(0, 2fr) minmax(0, 1fr);
+}
