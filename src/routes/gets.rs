@@ -91,7 +91,18 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
 
         let _ = data
             .db_channel
-            .send((Statement::from("SELECT * FROM activities"), send.clone()))
+            .send((
+                Statement::from(
+                    "SELECT 
+                    activities.id, 
+                    activities.post_url, 
+                    activities.timestamp, 
+                    sources.url 
+                FROM activities 
+                INNER JOIN sources ON activities.source_id = sources.id",
+                ),
+                send.clone(),
+            ))
             .await;
         let Some(result) = recv.recv().await else {
             unreachable!();

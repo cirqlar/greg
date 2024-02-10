@@ -1,7 +1,7 @@
 use actix_web::web;
 use libsql_client::{ResultSet, Row, Statement};
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
+use time::{format_description, OffsetDateTime};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub const LOGGED_IN_COOKIE: &str = "logged_in";
@@ -37,22 +37,25 @@ impl FromRow for Source {
 #[derive(Serialize, Deserialize)]
 pub struct Activity {
     pub id: i32,
-    pub source_id: i32,
+    pub source_url: String,
     pub post_url: String,
-    pub timestamp: OffsetDateTime,
+    pub timestamp: String,
 }
 
 impl FromRow for Activity {
     fn from_row(row: Row) -> anyhow::Result<Activity> {
         let id: i32 = row.try_column("id")?;
-        let source_id: i32 = row.try_column("source_id")?;
+        let source_url: &str = row.try_column("url")?;
         let post_url: &str = row.try_column("post_url")?;
         let timestamp_string: &str = row.try_column("timestamp")?;
         let timestamp: OffsetDateTime = serde_json::from_str(timestamp_string)?;
+        let timestamp = timestamp
+            .format(&format_description::well_known::Rfc2822)
+            .unwrap();
 
         Ok(Activity {
             id,
-            source_id,
+            source_url: source_url.into(),
             post_url: post_url.into(),
             timestamp,
         })
