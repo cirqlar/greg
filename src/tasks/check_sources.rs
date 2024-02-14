@@ -8,6 +8,11 @@ use tokio::{sync::mpsc, task::JoinSet};
 
 use crate::{routes::gets::get_sources_inner, types::AppData};
 
+enum Message {
+    Activity(i32, String),
+    Source(i32),
+}
+
 pub async fn check_sources(data: &AppData) {
     info!("[Check Sources] Starting check");
     let (db_send, mut db_recv) = mpsc::channel(100);
@@ -107,7 +112,7 @@ pub async fn check_sources(data: &AppData) {
                                 content_body = &r_entry.summary.as_ref().unwrap().content;
                             }
 
-                            if let Some(x) = r_entry.links.iter().find(|link| 
+                            if let Some(x) = r_entry.links.iter().find(|link|
                                 link.rel.is_some() && (link.rel.as_ref().unwrap() == "alternate" || link.rel.as_ref().unwrap() == "self")
                                 && link.media_type.is_some() && link.media_type.as_ref().unwrap() == "text/html"
                             ) {
@@ -158,6 +163,13 @@ pub async fn check_sources(data: &AppData) {
                         return;
                     }
 
+                    match r_send.send(Message::Source(source.id)).await {
+                        Ok(_) => {},
+                        Err(err) => {
+                            error!("[Check Sources] Failed to send down channel for source {} with err {}", source.id, err);
+                        }
+                    };
+
                     while let Some(res) = requests.join_next().await {
                         match res {
                             Ok(success) => match success {
@@ -167,7 +179,7 @@ pub async fn check_sources(data: &AppData) {
                                     if status.is_success() {
                                         info!("[Check Sources] succeed for url {} with body {}", &url, body);
 
-                                        match r_send.send((source.id, url.clone())).await {
+                                        match r_send.send(Message::Activity(source.id, url.clone())).await {
                                             Ok(_) => {
                                                 info!("[Check Sources] Sent Activity ({}, {})", source.id, url.clone());
                                             },
@@ -195,18 +207,19 @@ pub async fn check_sources(data: &AppData) {
             drop(act_send);
 
             let mut count = 0;
-            while let Some((source_id, url)) = act_recv.recv().await {
-                let _ = data.db_channel.send((
-                    Statement::with_args(
+            while let Some(m) = act_recv.recv().await {
+                let stmnt = match m {
+                    Message::Activity(id, url) => Statement::with_args(
                         "INSERT INTO activities (source_id, post_url, timestamp) VALUES (?, ?, ?)",
-                        args!(
-                            source_id,
-                            url.clone(),
-                            serde_json::to_string(&start_time).unwrap(),
-                        ),
+                        args!(id, url, serde_json::to_string(&start_time).unwrap(),),
                     ),
-                    db_send.clone()
-                )).await;
+                    Message::Source(id) => Statement::with_args(
+                        "UPDATE sources SET last_checked = ? WHERE id = ?",
+                        args!(serde_json::to_string(&start_time).unwrap(), id,),
+                    ),
+                };
+
+                let _ = data.db_channel.send((stmnt, db_send.clone())).await;
                 count += 1;
             }
 
@@ -223,7 +236,7 @@ pub async fn check_sources(data: &AppData) {
 
             if !failed.is_empty() {
                 error!(
-                    "[Check Sources] {} out of {} Activities failed to add",
+                    "[Check Sources] {} out of {} Activities and Sources failed to add",
                     failed.len(),
                     count
                 );
@@ -231,7 +244,10 @@ pub async fn check_sources(data: &AppData) {
                     error!("[Check Sources]\t{}: {}", i, err);
                 }
             } else {
-                info!("[Check Sources] Successfully added {} activities", count);
+                info!(
+                    "[Check Sources] Successfully added {} activities and sources",
+                    count
+                );
             }
 
             // Don't think this is necessary but will leave in case
