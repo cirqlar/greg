@@ -12,7 +12,7 @@ function TableGrid({
   return (
     <div className=" overflow-y-auto">
       <div
-        className={`max-w-full min-w-[500px] grid gap-x-4 gap-y-4 ${className}`}
+        className={`max-w-full min-w-[500px] grid gap-x-4 gap-y-4 items-center ${className}`}
       >
         {children}
       </div>

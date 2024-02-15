@@ -6,18 +6,23 @@ use log::{error, info, warn};
 use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 use tokio::{sync::mpsc, task::JoinSet};
 
-use crate::{routes::gets::get_sources_inner, types::AppData};
+use crate::{
+    routes::gets::get_sources_inner,
+    types::{AppData, FromRow, ISource},
+};
 
 enum Message {
     Activity(i32, String),
     Source(i32),
 }
 
+const CHECK_BUFFER_IN_MINUTES: i64 = 5;
+
 pub async fn check_sources(data: &AppData) {
     info!("[Check Sources] Starting check");
     let (db_send, mut db_recv) = mpsc::channel(100);
 
-    match get_sources_inner(data, db_send.clone(), &mut db_recv).await {
+    match get_sources_inner(data, db_send.clone(), &mut db_recv, ISource::from_row).await {
         Ok(sources) => {
             let mut threads = JoinSet::new();
             let client = reqwest::Client::new();
@@ -74,8 +79,9 @@ pub async fn check_sources(data: &AppData) {
 
                     if channel.updated.is_some() {
                         match OffsetDateTime::parse(&channel.updated.unwrap().to_rfc2822(), &Rfc2822) {
-                            Ok(pubtime) => {
-                                if (start_time - pubtime).whole_minutes() > 90 {
+                            Ok(upd_time) => {
+                                if (upd_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
+                                    info!("[Check Sources] Source {}, hasn't been updated since last_check {}, upd_time {}", &source.url, source.last_checked, upd_time);
                                     return;
                                 }
                             },
@@ -83,55 +89,67 @@ pub async fn check_sources(data: &AppData) {
                                 warn!("[Check Sources] Issue parsing updated for {}, failed with err {}", &source.url, err);
                             },
                         }
+                    } else if channel.published.is_some() {
+                        match OffsetDateTime::parse(&channel.published.unwrap().to_rfc2822(), &Rfc2822) {
+                            Ok(pub_time) => {
+                                if (pub_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
+                                    info!("[Check Sources] Source {} published time {} is before last_check {}, ignoring and checking entries for now", &source.url, pub_time, source.last_checked);
+                                } else {
+                                    info!("[Check Sources] Source {} published time {} would've passed last_check {} test", &source.url, pub_time, source.last_checked);
+                                }
+                            },
+                            Err(err) => {
+                                warn!("[Check Sources] Issue parsing updated for {}, failed with err {}", &source.url, err);
+                            },
+                        }
                     } else {
-                        warn!("[Check Sources] Source at {} doesn't have a last published date", &source.url);
+                        warn!("[Check Sources] Source at {} has neither published nor updated date", &source.url);
                     }
 
                     let mut requests = JoinSet::new();
 
                     let channel_title = channel.title.unwrap().content;
-                    for entry in channel.entries.iter() {
-                        let Ok(pubtime) = OffsetDateTime::parse(&entry.published.unwrap().to_rfc2822(), &Rfc2822) else {
-                            warn!("[Check Sources] Issue parsing updated for post at {:?}", entry.links.first());
+                    for entry in channel.entries {
+                        let content_url: String;
+                        if let Some(x) = entry.links.iter().find(|link|
+                            link.rel.is_some() && (link.rel.as_ref().unwrap() == "alternate" || link.rel.as_ref().unwrap() == "self")
+                            && link.media_type.is_some() && link.media_type.as_ref().unwrap() == "text/html"
+                        ) {
+                            content_url = x.href.clone();
+                        } else if entry.links.len() == 1 {
+                            content_url = entry.links[0].href.clone();
+                        } else if !entry.links.is_empty() {
+                            content_url = entry.links[0].href.clone();
+                            warn!("[Check Sources] Using first url for entry {}", content_url);
+                        } else if entry.content.is_some() {
+                            let opt = entry.content.as_ref().unwrap().src.as_ref();
+                            if opt.is_some() {
+                                content_url = opt.unwrap().href.clone();
+                                warn!("[Check Sources] Using content url for entry {}", content_url);
+                            } else {
+                                content_url = "No Url".into();
+                            }
+                        } else {
+                            content_url = "No Url".into();
+                        }
+
+                        let Ok(pub_time) = OffsetDateTime::parse(&entry.published.unwrap().to_rfc2822(), &Rfc2822) else {
+                            warn!("[Check Sources] Issue parsing published for post at {}", content_url);
                             break;
                         };
-                        if (start_time - pubtime).whole_minutes() > 60 {
-                            warn!("[Check Sources] Last post checked at url {:?} is {} minutes old", entry.links.first(), (start_time - pubtime).whole_minutes());
+                        if (pub_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
+                            warn!("[Check Sources] Last post checked at url {} is {} minutes old", content_url, (start_time - pub_time).whole_minutes());
                             break;
                         }
 
                         let r_client = thisclient.clone();
-                        let r_entry = entry.clone();
                         let r_channel_title = channel_title.clone();
                         requests.spawn(async move {
                             let mut content_body = "No body";
-                            let content_url: &str;
-                            if r_entry.content.is_some() {
-                                content_body = r_entry.content.as_ref().unwrap().body.as_ref().unwrap();
-                            } else if r_entry.summary.is_some() {
-                                content_body = &r_entry.summary.as_ref().unwrap().content;
-                            }
-
-                            if let Some(x) = r_entry.links.iter().find(|link|
-                                link.rel.is_some() && (link.rel.as_ref().unwrap() == "alternate" || link.rel.as_ref().unwrap() == "self")
-                                && link.media_type.is_some() && link.media_type.as_ref().unwrap() == "text/html"
-                            ) {
-                                content_url = &x.href;
-                            } else if r_entry.links.len() == 1 {
-                                content_url = &r_entry.links[0].href;
-                            } else if !r_entry.links.is_empty() {
-                                content_url = &r_entry.links[0].href;
-                                warn!("[Check Sources] Using first url for entry {}", content_url);
-                            } else if r_entry.content.is_some() {
-                                let opt = r_entry.content.as_ref().unwrap().src.as_ref();
-                                if opt.is_some() {
-                                    content_url = &opt.unwrap().href;
-                                    warn!("[Check Sources] Using content url for entry {}", content_url);
-                                } else {
-                                    content_url = "No Url";
-                                }
-                            } else {
-                                content_url = "No Url";
+                            if entry.content.is_some() {
+                                content_body = entry.content.as_ref().unwrap().body.as_ref().unwrap();
+                            } else if entry.summary.is_some() {
+                                content_body = &entry.summary.as_ref().unwrap().content;
                             }
 
                             let res = r_client.post(env::var("MAIL_URL").expect("MAIL_URL should be set"))
@@ -146,7 +164,7 @@ pub async fn check_sources(data: &AppData) {
                                         "email": env::var("TO_EMAIL").expect("TO_EMAIL should be set"),
                                         "name": env::var("TO_NAME").expect("TO_NAME should be set")
                                     }],
-                                    "subject": format!("{} - {}", r_entry.title.unwrap().content, r_channel_title),
+                                    "subject": format!("{} - {}", entry.title.unwrap().content, r_channel_title),
                                     "text": format!("Source: {}\n\n{}", content_url, content_body),
                                     "html": format!(r#"
                                         <p>Source: <a href="{}">{}</a></p>

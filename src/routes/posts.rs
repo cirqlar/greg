@@ -2,20 +2,20 @@ use std::env;
 
 use crate::{
     tasks::check_sources::check_sources,
-    types::{AddSource, AppState, Failure, LoginInfo, Success, LOGGED_IN_COOKIE},
+    types::{AddSource, AppData, Failure, LoginInfo, Success, LOGGED_IN_COOKIE},
     utils::{is_logged_in, return_password_error},
 };
 use actix_web::{cookie::Cookie, post, web, HttpRequest, HttpResponse, Responder};
 use feed_rs::parser;
 use libsql_client::{args, Statement};
 use log::{error, info};
-use time::OffsetDateTime;
+use time::{ext::NumericalDuration, OffsetDateTime};
 use tokio::sync::mpsc;
 use url::Url;
 use uuid::Uuid;
 
 #[post("/login")]
-pub async fn login(login_info: web::Json<LoginInfo>, data: web::Data<AppState>) -> impl Responder {
+pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Responder {
     let password = match env::var("PASSWORD") {
         Ok(x) => x,
         Err(err) => {
@@ -79,7 +79,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: web::Data<AppState>) 
 }
 
 #[post("/recheck")]
-pub async fn recheck(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
     let (send, mut recv) = mpsc::channel(100);
 
     if is_logged_in(&req, &data, send.clone(), &mut recv).await {
@@ -131,7 +131,7 @@ async fn test_source(url: &str) -> Option<HttpResponse> {
 #[post("/source/new")]
 pub async fn add_source(
     source: web::Json<AddSource>,
-    data: web::Data<AppState>,
+    data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
     let (send, mut recv) = mpsc::channel(100);
@@ -149,7 +149,7 @@ pub async fn add_source(
                     "INSERT INTO sources (url, last_checked) VALUES (?, ?)",
                     args!(
                         source.url.clone(),
-                        serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+                        serde_json::to_string(&(OffsetDateTime::now_utc() - 1.hours())).unwrap(),
                     ),
                 ),
                 send,

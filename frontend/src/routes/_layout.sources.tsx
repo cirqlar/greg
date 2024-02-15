@@ -1,7 +1,12 @@
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import TableGrid from "../components/table-grid";
 
 import style from "../components/table-grid.module.css";
@@ -10,37 +15,15 @@ export const Route = createFileRoute("/_layout/sources")({
   component: Sources,
 });
 
-type TSource = { id: string; url: string; last_checked: string };
+type TSource = { id: number; url: string; last_checked: string };
 const columnHelper = createColumnHelper<TSource>();
-const columns = [
-  columnHelper.accessor("id", {
-    cell: (info) => info.getValue(),
-    header: "ID",
-  }),
-  columnHelper.accessor("url", {
-    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
-    header: "Source",
-  }),
-  columnHelper.accessor("last_checked", {
-    cell: (info) => <span className="break-words">{info.getValue()}</span>,
-    header: "Last Checked"
-  }),
-];
 
 function Sources() {
   const [url, setUrl] = useState("");
   const queryClient = useQueryClient();
-  const sources = useQuery<TSource[]>(
-    {
-      queryKey: ["sources"],
-      queryFn: () => fetch("/api/sources").then((res) => res.json()),
-    }
-  );
-
-  const table = useReactTable({
-    columns,
-    data: sources.data ?? [],
-    getCoreRowModel: getCoreRowModel(),
+  const sources = useQuery<TSource[]>({
+    queryKey: ["sources"],
+    queryFn: () => fetch("/api/sources").then((res) => res.json()),
   });
 
   const addSource = useMutation({
@@ -57,6 +40,65 @@ function Sources() {
     },
   });
 
+  const deleteSource = useMutation({
+    mutationFn: (id: number) =>
+      fetch(`/api/source/${id}`, {
+        method: "DELETE",
+      }).then((res) => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources"] });
+    },
+  });
+
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("id", {
+        cell: (info) => info.getValue(),
+        header: "ID",
+      }),
+      columnHelper.accessor("url", {
+        cell: (info) => (
+          <span className="break-words">
+            <a
+              href={info.getValue()}
+              target="_blank"
+              referrerPolicy="no-referrer"
+            >
+              {info.getValue()}
+            </a>
+          </span>
+        ),
+        header: "Source",
+      }),
+      columnHelper.accessor("last_checked", {
+        cell: (info) => <span className="break-words">{info.getValue()}</span>,
+        header: "Last Checked",
+      }),
+      columnHelper.display({
+        id: "delete",
+        cell: (props) => (
+          <button
+            className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
+            onClick={async (e) => {
+              e.preventDefault();
+
+              deleteSource.mutate(props.row.original.id);
+            }}
+          >
+            DEL
+          </button>
+        ),
+      }),
+    ],
+    [deleteSource]
+  );
+
+  const table = useReactTable({
+    columns,
+    data: sources.data ?? [],
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <>
       <div className="max-w-lg mx-auto px-4 mb-8">
@@ -65,7 +107,7 @@ function Sources() {
           onSubmit={async (e) => {
             e.preventDefault();
 
-            await addSource.mutate({ url });
+            addSource.mutate({ url });
           }}
         >
           <label className="block mb-4 text-xl" htmlFor="password">
@@ -74,7 +116,7 @@ function Sources() {
           <div className="flex">
             <input
               value={url}
-              disabled={addSource.isPending}
+              disabled={addSource.isPending || deleteSource.isPending}
               onChange={(e) => setUrl(e.target.value)}
               className="block w-full text-black mr-2 px-4 py-3 rounded"
               id="password"
@@ -82,7 +124,7 @@ function Sources() {
               placeholder="Url"
             />
             <button
-              disabled={addSource.isPending}
+              disabled={addSource.isPending || deleteSource.isPending}
               className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
               type="submit"
             >

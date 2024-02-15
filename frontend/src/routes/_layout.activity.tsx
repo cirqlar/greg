@@ -26,21 +26,34 @@ const columns = [
     header: "ID",
   }),
   columnHelper.accessor("post_url", {
-    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
+    cell: (info) => (
+      <span className="break-words">
+        <a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">
+          {info.getValue()}
+        </a>
+      </span>
+    ),
     header: "Post",
   }),
   columnHelper.accessor("source_url", {
-    cell: (info) => <span className="break-words"><a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">{info.getValue()}</a></span>,
+    cell: (info) => (
+      <span className="break-words">
+        <a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">
+          {info.getValue()}
+        </a>
+      </span>
+    ),
     header: "Source",
   }),
   columnHelper.accessor("timestamp", {
     cell: (info) => <span className="break-words">{info.getValue()}</span>,
-    header: "Checked At"
+    header: "Checked At",
   }),
 ];
 
 function Activity() {
   const [loading, setLoading] = useState(false);
+  const [num, setNum] = useState(0);
 
   const queryClient = useQueryClient();
   const activity = useQuery<TActivity[]>({
@@ -63,6 +76,16 @@ function Activity() {
       queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
   });
+  
+  const clearActivities = useMutation({
+    mutationFn: (num: number) =>
+      fetch(`/api/activity${num < 1 ? "" : `/${num}`}`, {
+        method: "DELETE",
+      }).then((res) => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
+    },
+  });
 
   return (
     <>
@@ -75,7 +98,7 @@ function Activity() {
 
             setLoading(true);
             try {
-              await recheck.mutate();
+              await recheck.mutateAsync();
             } catch {
               console.log("Recheck failed");
             }
@@ -84,6 +107,44 @@ function Activity() {
         >
           Recheck
         </button>
+      </div>
+      <div className="max-w-lg mx-auto px-4 mb-8">
+        <h3 className="text-2xl font-bold mb-4">Clear Activity</h3>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+
+            setLoading(true);
+            try {
+              await clearActivities.mutateAsync(num);
+            } catch {
+              console.log("Recheck failed");
+            }
+            setLoading(false);
+          }}
+        >
+          <label className="block mb-4 text-xl" htmlFor="password">
+            Number to clear (empty clears all)
+          </label>
+          <div className="flex">
+            <input
+              value={num}
+              disabled={loading}
+              onChange={(e) => setNum(Number(e.target.value))}
+              className="block w-full text-black mr-2 px-4 py-3 rounded"
+              id="password"
+              type="number"
+              placeholder="Url"
+            />
+            <button
+              disabled={loading}
+              className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+              type="submit"
+            >
+              Clear
+            </button>
+          </div>
+        </form>
       </div>
       <div className="max-w-4xl mx-auto px-4">
         <h3 className="text-2xl font-bold mb-4">Activity</h3>

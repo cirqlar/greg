@@ -7,7 +7,7 @@ use crate::{
 };
 
 use actix_web::{cookie::Cookie, get, HttpRequest, HttpResponse, Responder};
-use libsql_client::Statement;
+use libsql_client::{Row, Statement};
 use log::{error, info};
 use tokio::sync::mpsc;
 
@@ -26,11 +26,12 @@ pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder 
     res.json(logged_in)
 }
 
-pub async fn get_sources_inner(
+pub async fn get_sources_inner<T>(
     data: &AppData,
     send: DbReturnSender,
     recv: &mut DbReturnReciever,
-) -> anyhow::Result<Vec<Source>> {
+    transform: fn(Row) -> anyhow::Result<T>,
+) -> anyhow::Result<Vec<T>> {
     let _ = data
         .db_channel
         .send((Statement::from("SELECT * FROM sources"), send))
@@ -41,7 +42,7 @@ pub async fn get_sources_inner(
         .rows
         .into_iter()
         .filter_map(|row| {
-            let ret = Source::from_row(row);
+            let ret = transform(row);
 
             if ret.is_err() {
                 error!(
@@ -64,7 +65,7 @@ pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
 
     if is_logged_in(&req, &data, send.clone(), &mut recv).await {
         info!("[Get Sources] Getting sources from db");
-        match get_sources_inner(&data, send.clone(), &mut recv).await {
+        match get_sources_inner(&data, send.clone(), &mut recv, Source::from_row).await {
             Ok(sources) => {
                 info!("[Get Sources] Got sources successfully");
                 HttpResponse::Ok().json(sources)

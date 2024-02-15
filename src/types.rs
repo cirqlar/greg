@@ -38,6 +38,28 @@ impl FromRow for Source {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct ISource {
+    pub id: i32,
+    pub url: String,
+    pub last_checked: OffsetDateTime,
+}
+
+impl FromRow for ISource {
+    fn from_row(row: Row) -> anyhow::Result<ISource> {
+        let id: i32 = row.try_column("id")?;
+        let url: &str = row.try_column("url")?;
+        let last_checked_string: &str = row.try_column("last_checked")?;
+        let last_checked: OffsetDateTime = serde_json::from_str(last_checked_string)?;
+
+        Ok(ISource {
+            id,
+            url: url.into(),
+            last_checked,
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Activity {
     pub id: i32,
     pub source_url: String,

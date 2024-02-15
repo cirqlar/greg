@@ -10,6 +10,7 @@ use dotenvy::dotenv;
 use greg::{
     db,
     routes::{
+        deletes::{clear_activities, clear_all_activities, delete_source},
         gets::{check_logged_in, get_activity, get_sources},
         posts::{add_source, login, recheck},
     },
@@ -77,7 +78,10 @@ async fn main() -> anyhow::Result<()> {
                     .service(add_source)
                     .service(recheck)
                     .service(login)
-                    .service(check_logged_in),
+                    .service(check_logged_in)
+                    .service(delete_source)
+                    .service(clear_all_activities)
+                    .service(clear_activities),
             )
             .service(
                 spa()
