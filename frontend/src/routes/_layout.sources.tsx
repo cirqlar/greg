@@ -107,7 +107,7 @@ function Sources() {
           onSubmit={async (e) => {
             e.preventDefault();
 
-            addSource.mutate({ url });
+            addSource.mutate({ url: url.trim() });
           }}
         >
           <label className="block mb-4 text-xl" htmlFor="password">

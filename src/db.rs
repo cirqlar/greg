@@ -36,7 +36,7 @@ pub async fn migrate_db(client: &Client) -> anyhow::Result<()> {
         .batch([
             "CREATE TABLE IF NOT EXISTS `sources`(
                 `id` INTEGER NOT NULL PRIMARY KEY,
-                `url` TEXT NOT NULL,
+                `url` TEXT NOT NULL UNIQUE,
                 `last_checked` TEXT NOT NULL
             );",
             "CREATE TABLE IF NOT EXISTS `activities`(
