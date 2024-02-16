@@ -3,7 +3,7 @@ use std::env;
 use feed_rs::parser;
 use libsql_client::{args, Statement};
 use log::{error, info, warn};
-use time::{format_description::well_known::Rfc2822, OffsetDateTime};
+use time::OffsetDateTime;
 use tokio::{sync::mpsc, task::JoinSet};
 
 use crate::{
@@ -78,7 +78,7 @@ pub async fn check_sources(data: &AppData) {
                     };
 
                     if channel.updated.is_some() {
-                        match OffsetDateTime::parse(&channel.updated.unwrap().to_rfc2822(), &Rfc2822) {
+                        match OffsetDateTime::from_unix_timestamp(channel.updated.unwrap().timestamp()) {
                             Ok(upd_time) => {
                                 if (upd_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
                                     info!("[Check Sources] Source {}, hasn't been updated since last_check {}, upd_time {}", &source.url, source.last_checked, upd_time);
@@ -90,7 +90,7 @@ pub async fn check_sources(data: &AppData) {
                             },
                         }
                     } else if channel.published.is_some() {
-                        match OffsetDateTime::parse(&channel.published.unwrap().to_rfc2822(), &Rfc2822) {
+                        match OffsetDateTime::from_unix_timestamp(channel.published.unwrap().timestamp()) {
                             Ok(pub_time) => {
                                 if (pub_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
                                     info!("[Check Sources] Source {} published time {} is before last_check {}, ignoring and checking entries for now", &source.url, pub_time, source.last_checked);
@@ -133,7 +133,7 @@ pub async fn check_sources(data: &AppData) {
                             content_url = "No Url".into();
                         }
 
-                        let Ok(pub_time) = OffsetDateTime::parse(&entry.published.unwrap().to_rfc2822(), &Rfc2822) else {
+                        let Ok(pub_time) = OffsetDateTime::from_unix_timestamp(entry.published.unwrap().timestamp()) else {
                             warn!("[Check Sources] Issue parsing published for post at {}", content_url);
                             break;
                         };

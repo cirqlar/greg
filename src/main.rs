@@ -12,14 +12,16 @@ use greg::{
     routes::{
         deletes::{clear_activities, clear_all_activities, delete_source},
         gets::{check_logged_in, get_activity, get_sources},
-        posts::{add_source, login, recheck},
+        posts::{add_source, login, recheck, trigger_check},
     },
-    tasks::check_sources::check_sources,
     types::{AppState, DbMesssage},
 };
-
 use log::info;
 use tokio::sync::mpsc::{self};
+
+#[cfg(feature = "scheduler")]
+use greg::tasks::check_sources::check_sources;
+#[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 #[tokio::main]
@@ -51,21 +53,24 @@ async fn main() -> anyhow::Result<()> {
         db_channel: send.clone(),
     });
 
-    let tmp_data = app_data.clone();
+    #[cfg(feature = "scheduler")]
+    {
+        let tmp_data = app_data.clone();
 
-    let scheduler = JobScheduler::new().await?;
-    scheduler
-        .add(Job::new_async("0 0 * * * *", move |_uuid, _l| {
-            let sched_data = web::Data::clone(&tmp_data);
-            Box::pin(async move {
-                let our_data = web::Data::clone(&sched_data);
-                check_sources(&our_data).await;
-            })
-        })?)
-        .await?;
-    info!("Initialized Scheduler");
-    scheduler.start().await?;
-    info!("Scheduler Started");
+        let scheduler = JobScheduler::new().await?;
+        scheduler
+            .add(Job::new_async("0 0 * * * *", move |_uuid, _l| {
+                let sched_data = web::Data::clone(&tmp_data);
+                Box::pin(async move {
+                    let our_data = web::Data::clone(&sched_data);
+                    check_sources(&our_data).await;
+                })
+            })?)
+            .await?;
+        info!("Initialized Scheduler");
+        scheduler.start().await?;
+        info!("Scheduler Started");
+    }
 
     HttpServer::new(move || {
         App::new()
@@ -81,7 +86,8 @@ async fn main() -> anyhow::Result<()> {
                     .service(check_logged_in)
                     .service(delete_source)
                     .service(clear_all_activities)
-                    .service(clear_activities),
+                    .service(clear_activities)
+                    .service(trigger_check),
             )
             .service(
                 spa()

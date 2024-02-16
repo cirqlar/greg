@@ -90,6 +90,35 @@ pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
     }
 }
 
+#[post("/check")]
+pub async fn trigger_check(login_info: web::Json<LoginInfo>, data: AppData) -> impl Responder {
+    let password = match env::var("PASSWORD") {
+        Ok(x) => x,
+        Err(err) => {
+            error!(
+                "[Trigger Check] PASSWORD is not set. Env get failed with err: {}",
+                err
+            );
+            return return_password_error();
+        }
+    };
+
+    if password == login_info.password {
+        info!("[Trigger Check] Login successful");
+
+        check_sources(&data).await;
+        HttpResponse::Ok().json(Success {
+            message: "Checked Sources Successfully".into(),
+        })
+    } else {
+        error!(
+            "[Trigger Check] Login failed with wrong password: {}",
+            login_info.password
+        );
+        return_password_error()
+    }
+}
+
 async fn test_source(url: &str) -> Option<HttpResponse> {
     let _url = match Url::parse(url) {
         Ok(x) => x,

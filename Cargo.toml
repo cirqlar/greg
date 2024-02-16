@@ -3,6 +3,9 @@ name = "greg"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+scheduler = ["dep:tokio-cron-scheduler"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -19,6 +22,6 @@ serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 time = { version = "0.3.34", features = ["serde"] }
 tokio = { version = "1.36.0", features = ["full"] }
-tokio-cron-scheduler = "0.10.0"
+tokio-cron-scheduler = { version = "0.10.0", optional = true }
 url = "2.5.0"
 uuid = { version = "1.7.0", features = ["v4"] }
