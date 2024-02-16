@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
                     .finish(),
             )
     })
-    .bind(("127.0.0.1", 10000))?
+    .bind(("0.0.0.0", 10000))?
     .run()
     .await?;
 
