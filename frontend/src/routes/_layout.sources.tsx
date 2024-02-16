@@ -10,6 +10,7 @@ import {
 import TableGrid from "../components/table-grid";
 
 import style from "../components/table-grid.module.css";
+import { formatDate } from "../components/date";
 
 export const Route = createFileRoute("/_layout/sources")({
   component: Sources,
@@ -71,7 +72,9 @@ function Sources() {
         header: "Source",
       }),
       columnHelper.accessor("last_checked", {
-        cell: (info) => <span className="break-words">{info.getValue()}</span>,
+        cell: (info) => (
+          <span className="break-words">{formatDate(info.getValue())}</span>
+        ),
         header: "Last Checked",
       }),
       columnHelper.display({

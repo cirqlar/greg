@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { Fragment, useState } from "react";
 import TableGrid from "../components/table-grid";
+import { formatDate } from "../components/date";
 
 export const Route = createFileRoute("/_layout/activity")({
   component: Activity,
@@ -46,7 +47,7 @@ const columns = [
     header: "Source",
   }),
   columnHelper.accessor("timestamp", {
-    cell: (info) => <span className="break-words">{info.getValue()}</span>,
+    cell: (info) => <span className="break-words">{formatDate(info.getValue())}</span>,
     header: "Checked At",
   }),
 ];
