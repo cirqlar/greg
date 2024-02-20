@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, scope},
     App, HttpServer,
 };
+use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
 use dotenvy::dotenv;
 use greg::{
@@ -76,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(app_data.clone())
+            .app_data(basic::Config::default().realm("Restricted"))
             .service(
                 scope("/api")
                     .service(get_sources)

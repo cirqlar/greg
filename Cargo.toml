@@ -10,6 +10,7 @@ scheduler = ["dep:tokio-cron-scheduler"]
 
 [dependencies]
 actix-web = "4.4.1"
+actix-web-httpauth = "0.8.1"
 actix-web-lab = { version = "0.20.2", features = ["spa"] }
 anyhow = "1.0.79"
 dotenvy = "0.15.7"

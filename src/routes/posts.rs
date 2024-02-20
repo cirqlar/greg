@@ -6,6 +6,7 @@ use crate::{
     utils::{is_logged_in, return_password_error},
 };
 use actix_web::{cookie::Cookie, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web_httpauth::extractors::basic::BasicAuth;
 use feed_rs::parser;
 use libsql_client::{args, Statement};
 use log::{error, info};
@@ -91,7 +92,7 @@ pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
 }
 
 #[post("/check")]
-pub async fn trigger_check(login_info: web::Json<LoginInfo>, data: AppData) -> impl Responder {
+pub async fn trigger_check(login_info: BasicAuth, data: AppData) -> impl Responder {
     let password = match env::var("PASSWORD") {
         Ok(x) => x,
         Err(err) => {
@@ -103,7 +104,7 @@ pub async fn trigger_check(login_info: web::Json<LoginInfo>, data: AppData) -> i
         }
     };
 
-    if password == login_info.password {
+    if password == login_info.password().unwrap_or("") {
         info!("[Trigger Check] Login successful");
 
         check_sources(&data).await;
@@ -113,7 +114,7 @@ pub async fn trigger_check(login_info: web::Json<LoginInfo>, data: AppData) -> i
     } else {
         error!(
             "[Trigger Check] Login failed with wrong password: {}",
-            login_info.password
+            login_info.password().unwrap_or("Missing Password")
         );
         return_password_error()
     }
