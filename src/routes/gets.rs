@@ -9,6 +9,7 @@ use crate::{
 use actix_web::{cookie::Cookie, get, HttpRequest, HttpResponse, Responder};
 use libsql_client::{Row, Statement};
 use log::{error, info};
+use serde_json::json;
 use tokio::sync::mpsc;
 
 #[get("/check-logged-in")]
@@ -24,6 +25,13 @@ pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder 
     }
 
     res.json(logged_in)
+}
+
+#[get("/keep_alive")]
+pub async fn keep_alive() -> impl Responder {
+    HttpResponse::Ok().json(json!({
+        "kept_alive": true,
+    }))
 }
 
 pub async fn get_sources_inner<T>(

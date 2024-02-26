@@ -12,7 +12,7 @@ use greg::{
     db,
     routes::{
         deletes::{clear_activities, clear_all_activities, delete_source},
-        gets::{check_logged_in, get_activity, get_sources},
+        gets::{check_logged_in, get_activity, get_sources, keep_alive},
         posts::{add_source, login, recheck, trigger_check},
     },
     types::{AppState, DbMesssage},
@@ -89,7 +89,8 @@ async fn main() -> anyhow::Result<()> {
                     .service(delete_source)
                     .service(clear_all_activities)
                     .service(clear_activities)
-                    .service(trigger_check),
+                    .service(trigger_check)
+                    .service(keep_alive),
             )
             .service(
                 spa()
