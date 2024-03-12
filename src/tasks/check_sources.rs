@@ -13,7 +13,7 @@ use crate::{
 
 enum Message {
     Activity(i32, String),
-    Source(i32),
+    Source(i32, OffsetDateTime),
 }
 
 const CHECK_BUFFER_IN_MINUTES: i64 = 5;
@@ -107,6 +107,7 @@ pub async fn check_sources(data: &AppData) {
                     }
 
                     let mut requests = JoinSet::new();
+                    let mut most_recent = None;
 
                     let channel_title = channel.title.unwrap().content;
                     for entry in channel.entries {
@@ -140,6 +141,9 @@ pub async fn check_sources(data: &AppData) {
                         if (pub_time - source.last_checked).whole_minutes() < -CHECK_BUFFER_IN_MINUTES {
                             warn!("[Check Sources] Last post checked at url {} is {} minutes old", content_url, (start_time - pub_time).whole_minutes());
                             break;
+                        }
+                        if most_recent.is_none() {
+                            most_recent = Some(pub_time);
                         }
 
                         let r_client = thisclient.clone();
@@ -181,7 +185,7 @@ pub async fn check_sources(data: &AppData) {
                         return;
                     }
 
-                    match r_send.send(Message::Source(source.id)).await {
+                    match r_send.send(Message::Source(source.id, most_recent.unwrap())).await {
                         Ok(_) => {},
                         Err(err) => {
                             error!("[Check Sources] Failed to send down channel for source {} with err {}", source.id, err);
@@ -231,9 +235,9 @@ pub async fn check_sources(data: &AppData) {
                         "INSERT INTO activities (source_id, post_url, timestamp) VALUES (?, ?, ?)",
                         args!(id, url, serde_json::to_string(&start_time).unwrap(),),
                     ),
-                    Message::Source(id) => Statement::with_args(
+                    Message::Source(id, most_recent) => Statement::with_args(
                         "UPDATE sources SET last_checked = ? WHERE id = ?",
-                        args!(serde_json::to_string(&start_time).unwrap(), id,),
+                        args!(serde_json::to_string(&most_recent).unwrap(), id,),
                     ),
                 };
 

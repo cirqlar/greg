@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
         let scheduler = JobScheduler::new().await?;
         scheduler
-            .add(Job::new_async("0 0 * * * *", move |_uuid, _l| {
+            .add(Job::new_async("0 0 */3 * * *", move |_uuid, _l| {
                 let sched_data = web::Data::clone(&tmp_data);
                 Box::pin(async move {
                     let our_data = web::Data::clone(&sched_data);
