@@ -138,7 +138,7 @@ pub async fn check_sources(data: &AppData) {
                             warn!("[Check Sources] Issue parsing published for post at {}", content_url);
                             break;
                         };
-                        if pub_time < source.last_checked {
+                        if pub_time <= source.last_checked {
                             warn!("[Check Sources] Last post checked at url {} is {} minutes old", content_url, (start_time - pub_time).whole_minutes());
                             break;
                         }
