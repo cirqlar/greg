@@ -109,7 +109,8 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
                         sources.url 
                     FROM activities 
                     INNER JOIN sources ON activities.source_id = sources.id
-                    ORDER BY activities.id DESC",
+                    ORDER BY activities.id DESC
+                    LIMIT 35",
                 ),
                 send.clone(),
             ))
