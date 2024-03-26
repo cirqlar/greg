@@ -103,12 +103,13 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
             .send((
                 Statement::from(
                     "SELECT 
-                    activities.id, 
-                    activities.post_url, 
-                    activities.timestamp, 
-                    sources.url 
-                FROM activities 
-                INNER JOIN sources ON activities.source_id = sources.id",
+                        activities.id, 
+                        activities.post_url, 
+                        activities.timestamp, 
+                        sources.url 
+                    FROM activities 
+                    INNER JOIN sources ON activities.source_id = sources.id
+                    ORDER BY activities.id DESC",
                 ),
                 send.clone(),
             ))
