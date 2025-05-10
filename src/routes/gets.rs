@@ -1,12 +1,12 @@
 use crate::{
     types::{
-        Activity, AppData, DbReturnReciever, DbReturnSender, Failure, FromRow, Source,
-        LOGGED_IN_COOKIE,
+        Activity, AppData, DbReturnReciever, DbReturnSender, Failure, FromRow, LOGGED_IN_COOKIE,
+        Source,
     },
     utils::{is_logged_in, return_password_error},
 };
 
-use actix_web::{cookie::Cookie, get, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, get};
 use libsql_client::{Row, Statement};
 use log::{error, info};
 use serde_json::json;

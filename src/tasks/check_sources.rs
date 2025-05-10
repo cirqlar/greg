@@ -1,7 +1,7 @@
 use std::env;
 
 use feed_rs::parser;
-use libsql_client::{args, Statement};
+use libsql_client::{Statement, args};
 use log::{error, info, warn};
 use time::OffsetDateTime;
 use tokio::{sync::mpsc, task::JoinSet};

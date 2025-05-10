@@ -2,15 +2,15 @@ use std::env;
 
 use crate::{
     tasks::check_sources::check_sources,
-    types::{AddSource, AppData, Failure, LoginInfo, Success, LOGGED_IN_COOKIE},
+    types::{AddSource, AppData, Failure, LOGGED_IN_COOKIE, LoginInfo, Success},
     utils::{is_logged_in, return_password_error},
 };
-use actix_web::{cookie::Cookie, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, post, web};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use feed_rs::parser;
-use libsql_client::{args, Statement};
+use libsql_client::{Statement, args};
 use log::{error, info};
-use time::{ext::NumericalDuration, OffsetDateTime};
+use time::{OffsetDateTime, ext::NumericalDuration};
 use tokio::sync::mpsc;
 use url::Url;
 use uuid::Uuid;

@@ -1,5 +1,5 @@
-use actix_web::{delete, web, HttpRequest, HttpResponse, Responder};
-use libsql_client::{args, Statement};
+use actix_web::{HttpRequest, HttpResponse, Responder, delete, web};
+use libsql_client::{Statement, args};
 use log::{error, info};
 use tokio::sync::mpsc;
 

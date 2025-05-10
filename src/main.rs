@@ -1,9 +1,9 @@
 use std::thread;
 
 use actix_web::{
+    App, HttpServer,
     middleware::Logger,
     web::{self, scope},
-    App, HttpServer,
 };
 use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
