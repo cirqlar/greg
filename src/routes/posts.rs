@@ -1,17 +1,15 @@
 use std::env;
 
 use crate::{
-    tasks::check_sources::check_sources,
+    db::{LOGINS_T, R_WATCHED_TABS_T, SOURCES_T},
+    tasks::{check_roadmap::check_roadmap, check_sources::check_sources},
     types::{AddSource, AppData, Failure, LOGGED_IN_COOKIE, LoginInfo, Success},
     utils::{is_logged_in, return_password_error},
 };
 use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, post, web};
-use actix_web_httpauth::extractors::basic::BasicAuth;
 use feed_rs::parser;
-use libsql_client::{Statement, args};
 use log::{error, info};
 use time::{OffsetDateTime, ext::NumericalDuration};
-use tokio::sync::mpsc;
 use url::Url;
 use uuid::Uuid;
 
@@ -32,32 +30,28 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
         let id = Uuid::new_v4();
 
         info!("[Login] Inserting login key");
+        let db = data.db.connect().unwrap();
 
-        let (send, mut recv) = mpsc::channel(100);
-        let _ = data
-            .db_channel
-            .send((
-                Statement::with_args(
-                    "INSERT INTO logins (timestamp, key) VALUES (?, ?)",
-                    args!(
-                        serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
-                        id.to_string(),
-                    ),
-                ),
-                send,
-            ))
+        let result = db
+            .execute(
+                &format!("INSERT INTO {LOGINS_T} (timestamp, key) VALUES (?1, ?2)"),
+                [
+                    serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+                    id.to_string(),
+                ],
+            )
             .await;
-        match recv.recv().await {
-            Some(Ok(_x)) => {
+
+        match result {
+            Ok(_x) => {
                 info!("[Login] Insert successful");
             }
-            Some(Err(err)) => {
+            Err(err) => {
                 error!("[Login] Inserting login key failed with err: {}", err);
                 return HttpResponse::InternalServerError().json(Failure {
                     message: "Issue logging in".into(),
                 });
             }
-            None => unreachable!(),
         };
 
         let c = Cookie::build(LOGGED_IN_COOKIE, id.to_string())
@@ -81,41 +75,26 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
 
 #[post("/recheck")]
 pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
-    let (send, mut recv) = mpsc::channel(100);
-
-    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db).await {
         check_sources(&data).await;
-        HttpResponse::Ok().body("Recheck")
+        HttpResponse::Ok().json(Success {
+            message: "Rechecked Sources Successfully".into(),
+        })
     } else {
         return_password_error()
     }
 }
 
-#[post("/check")]
-pub async fn trigger_check(login_info: BasicAuth, data: AppData) -> impl Responder {
-    let password = match env::var("PASSWORD") {
-        Ok(x) => x,
-        Err(err) => {
-            error!(
-                "[Trigger Check] PASSWORD is not set. Env get failed with err: {}",
-                err
-            );
-            return return_password_error();
-        }
-    };
-
-    if password == login_info.password().unwrap_or("") {
-        info!("[Trigger Check] Login successful");
-
-        check_sources(&data).await;
+#[post("/recheck_roadmap")]
+pub async fn recheck_roadmap(data: AppData, req: HttpRequest) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db).await {
+        check_roadmap(&data).await;
         HttpResponse::Ok().json(Success {
-            message: "Checked Sources Successfully".into(),
+            message: "Rechecked Roadmap Successfully".into(),
         })
     } else {
-        error!(
-            "[Trigger Check] Login failed with wrong password: {}",
-            login_info.password().unwrap_or("Missing Password")
-        );
         return_password_error()
     }
 }
@@ -164,30 +143,26 @@ pub async fn add_source(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let (send, mut recv) = mpsc::channel(100);
-
-    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
         if let Some(ret) = test_source(&source.url).await {
             return ret;
         }
 
         info!("[Add Source] Inserting source to db");
-        let _ = data
-            .db_channel
-            .send((
-                Statement::with_args(
-                    "INSERT INTO sources (url, last_checked) VALUES (?, ?)",
-                    args!(
-                        source.url.clone(),
-                        serde_json::to_string(&(OffsetDateTime::now_utc() - 1.hours())).unwrap(),
-                    ),
-                ),
-                send,
-            ))
+        let result = db
+            .execute(
+                &format!("INSERT INTO {SOURCES_T} (url, last_checked) VALUES (?1, ?2)"),
+                [
+                    source.url.clone(),
+                    serde_json::to_string(&(OffsetDateTime::now_utc() - 1.hours())).unwrap(),
+                ],
+            )
             .await;
-        match recv.recv().await {
-            Some(Ok(success)) => {
-                if success.rows_affected >= 1 {
+
+        match result {
+            Ok(success) => {
+                if success >= 1 {
                     info!("[Add Source] Inserting source successful");
                     HttpResponse::Ok().json(Success {
                         message: "Source added successfully".into(),
@@ -195,23 +170,78 @@ pub async fn add_source(
                 } else {
                     error!(
                         "[Add Source] Rows affected in insert not 1, is: {}",
-                        success.rows_affected
+                        success
                     );
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue adding source".into(),
                     })
                 }
             }
-            Some(Err(err)) => {
+            Err(err) => {
                 error!("[Add Source] Inserting source failed with err: {}", err);
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't add source. Err: {}", err),
                 })
             }
-            None => unreachable!(),
         }
     } else {
         error!("[Add Source] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[post("/watched_tabs/add/{tab_id}")]
+pub async fn add_watched_tab(
+    path: web::Path<String>,
+    data: AppData,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        let tab_id = path.into_inner();
+
+        info!("[Add Watched Tab] Inserting tab to db");
+        let result = db
+            .execute(
+                &format!(
+                    "INSERT INTO {R_WATCHED_TABS_T} (tab_roadmap_id, timestamp) VALUES (?1, ?2)"
+                ),
+                [
+                    tab_id,
+                    serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+                ],
+            )
+            .await;
+
+        match result {
+            Ok(success) => {
+                if success >= 1 {
+                    info!("[Add Watched Tab] Inserting watched tab successful");
+                    HttpResponse::Ok().json(Success {
+                        message: "Watched tab added successfully".into(),
+                    })
+                } else {
+                    error!(
+                        "[Add Watched Tab] Rows affected in insert not 1, is: {}",
+                        success
+                    );
+                    HttpResponse::InternalServerError().json(Failure {
+                        message: "Unexpected issue adding watched tab".into(),
+                    })
+                }
+            }
+            Err(err) => {
+                error!(
+                    "[Add Watched Tab] Inserting watched tab failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't add Watched Tab. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Add Watched Tab] Failed due to auth error");
         return_password_error()
     }
 }

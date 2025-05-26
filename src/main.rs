@@ -1,5 +1,3 @@
-use std::thread;
-
 use actix_web::{
     App, HttpServer,
     middleware::Logger,
@@ -11,14 +9,17 @@ use dotenvy::dotenv;
 use greg::{
     db,
     routes::{
-        deletes::{clear_activities, clear_all_activities, delete_source},
-        gets::{check_logged_in, get_activity, get_sources, keep_alive},
-        posts::{add_source, login, recheck, trigger_check},
+        deletes::{clear_activities, clear_all_activities, delete_source, delete_watched_tab},
+        gets::{
+            check_logged_in, get_activity, get_most_recent_tabs, get_roadmap_activity, get_sources,
+            get_watched_tabs, keep_alive,
+        },
+        posts::{add_source, add_watched_tab, login, recheck, recheck_roadmap},
     },
-    types::{AppState, DbMesssage},
+    tasks::check_roadmap::check_roadmap,
+    types::AppState,
 };
 use log::info;
-use tokio::sync::mpsc::{self};
 
 #[cfg(feature = "scheduler")]
 use greg::tasks::check_sources::check_sources;
@@ -30,32 +31,21 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    let db = db::get_database().await;
     info!("Connecting to Database");
-    let client = db::establish_connection().await;
-    info!("Connected to Database");
-    db::migrate_db(&client).await?;
+    let conn = db.connect().unwrap().clone();
+    info!("Connected to Database. Migrating");
+    db::migrate_db(conn).await?;
     info!("Migrated Database");
 
-    let (send, mut recv) = mpsc::channel::<DbMesssage>(100);
+    let app_data = web::Data::new(AppState { db });
 
-    thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-
-        rt.block_on(async {
-            let db_client = db::establish_connection().await;
-            while let Some((stmnt, send)) = recv.recv().await {
-                let res = db_client.execute(stmnt).await;
-                let _ = send.send(res).await;
-            }
-        });
-    });
-
-    let app_data = web::Data::new(AppState {
-        db_channel: send.clone(),
-    });
+    // check_roadmap(&app_data).await;
+    // return Ok(());
 
     #[cfg(feature = "scheduler")]
     {
+        // Sources
         let tmp_data = app_data.clone();
 
         let scheduler = JobScheduler::new().await?;
@@ -68,9 +58,26 @@ async fn main() -> anyhow::Result<()> {
                 })
             })?)
             .await?;
-        info!("Initialized Scheduler");
+        info!("Initialized Sources Scheduler");
         scheduler.start().await?;
-        info!("Scheduler Started");
+        info!("Sources Scheduler Started");
+
+        // Roadmap
+        let tmp_data = app_data.clone();
+
+        let scheduler = JobScheduler::new().await?;
+        scheduler
+            .add(Job::new_async("0 0 4 * * *", move |_uuid, _l| {
+                let sched_data = web::Data::clone(&tmp_data);
+                Box::pin(async move {
+                    let our_data = web::Data::clone(&sched_data);
+                    check_roadmap(&our_data).await;
+                })
+            })?)
+            .await?;
+        info!("Initialized Roadmap Scheduler");
+        scheduler.start().await?;
+        info!("Roadmap Scheduler Started");
     }
 
     HttpServer::new(move || {
@@ -89,8 +96,14 @@ async fn main() -> anyhow::Result<()> {
                     .service(delete_source)
                     .service(clear_all_activities)
                     .service(clear_activities)
-                    .service(trigger_check)
-                    .service(keep_alive),
+                    // .service(trigger_check)
+                    .service(keep_alive)
+                    .service(get_roadmap_activity)
+                    .service(get_most_recent_tabs)
+                    .service(get_watched_tabs)
+                    .service(recheck_roadmap)
+                    .service(add_watched_tab)
+                    .service(delete_watched_tab),
             )
             .service(
                 spa()

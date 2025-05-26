@@ -1,28 +1,29 @@
-use std::env;
-
 use feed_rs::parser;
-use libsql_client::{Statement, args};
 use log::{error, info, warn};
 use time::OffsetDateTime;
 use tokio::{sync::mpsc, task::JoinSet};
 
 use crate::{
-    routes::gets::get_sources_inner,
-    types::{AppData, FromRow, ISource},
+    db::{ACTIVITIES_T, SOURCES_T},
+    queries::sources::get_sources,
+    types::AppData,
 };
 
 enum Message {
-    Activity(i32, String),
-    Source(i32, OffsetDateTime),
+    Activity(u32, String),
+    Source(u32, OffsetDateTime),
 }
 
 const CHECK_BUFFER_IN_MINUTES: i64 = 5;
 
 pub async fn check_sources(data: &AppData) {
     info!("[Check Sources] Starting check");
-    let (db_send, mut db_recv) = mpsc::channel(100);
 
-    match get_sources_inner(data, db_send.clone(), &mut db_recv, ISource::from_row).await {
+    if !cfg!(feature = "mail") {
+        warn!("[Check Sources] will not send emails as feature is not enabled");
+    }
+
+    match get_sources(data.db.connect().unwrap()).await {
         Ok(sources) => {
             let mut threads = JoinSet::new();
             let client = reqwest::Client::new();
@@ -109,6 +110,7 @@ pub async fn check_sources(data: &AppData) {
                     let mut requests = JoinSet::new();
                     let mut most_recent = None;
 
+                    #[cfg(feature = "mail")]
                     let channel_title = channel.title.unwrap().content;
                     for entry in channel.entries {
                         let content_url: String;
@@ -146,37 +148,33 @@ pub async fn check_sources(data: &AppData) {
                             most_recent = Some(pub_time);
                         }
 
-                        let r_client = thisclient.clone();
+                        // let r_client = thisclient.clone();
+                        #[cfg(feature = "mail")]
                         let r_channel_title = channel_title.clone();
                         requests.spawn(async move {
-                            let mut content_body = "No body";
-                            if entry.content.is_some() {
-                                content_body = entry.content.as_ref().unwrap().body.as_ref().unwrap();
-                            } else if entry.summary.is_some() {
-                                content_body = &entry.summary.as_ref().unwrap().content;
-                            }
+                            #[cfg(feature = "mail")]
+                            {
+                                let mut content_body = "No body";
+                                if entry.content.is_some() {
+                                    content_body = entry.content.as_ref().unwrap().body.as_ref().unwrap();
+                                } else if entry.summary.is_some() {
+                                    content_body = &entry.summary.as_ref().unwrap().content;
+                                }
 
-                            let res = r_client.post(env::var("MAIL_URL").expect("MAIL_URL should be set"))
-                                .bearer_auth(env::var("MAIL_TOKEN").expect("MAIL_TOKEN should be set"))
-                                .header("Content-Type", "application/json")
-                                .body(serde_json::json!({
-                                    "from": {
-                                        "email": env::var("FROM_EMAIL").expect("FROM_EMAIL should be set"),
-                                        "name": env::var("FROM_NAME").expect("FROM_NAME should be set")
-                                    },
-                                    "to": [{
-                                        "email": env::var("TO_EMAIL").expect("TO_EMAIL should be set"),
-                                        "name": env::var("TO_NAME").expect("TO_NAME should be set")
-                                    }],
-                                    "subject": format!("{} - {}", entry.title.unwrap().content, r_channel_title),
-                                    "text": format!("Source: {}\n\n{}", content_url, content_body),
-                                    "html": format!(r#"
-                                        <p>Source: <a href="{}">{}</a></p>
-                                        <p>{}</p>
-                                    "#, content_url, content_url, content_body)
-                                }).to_string()).send().await;
+                                let res = crate::queries::mail::send_email(
+                                    &format!("{} - {}", entry.title.unwrap().content, r_channel_title), 
+                                    &format!("Source: {}\n\n{}", content_url, content_body), 
+                                    &format!(r#"
+                                            <p>Source: <a href="{}">{}</a></p>
+                                            <p>{}</p>
+                                        "#, content_url, content_url, content_body)
+                                ).await;
 
-                            (res, content_url.to_owned())
+                                return (res, content_url.to_owned());
+                            };
+
+                            #[cfg(not(feature = "mail"))]
+                            (content_url.to_owned())
                         });
                     }
 
@@ -194,28 +192,40 @@ pub async fn check_sources(data: &AppData) {
 
                     while let Some(res) = requests.join_next().await {
                         match res {
-                            Ok(success) => match success {
-                                (Ok(res), url) => {
-                                    let status = res.status();
-                                    let body = res.text().await.unwrap_or("Missing body".into());
-                                    if status.is_success() {
-                                        info!("[Check Sources] succeed for url {} with body {}", &url, body);
+                            Ok(success) => {
+                                #[cfg(feature = "mail")]
+                                match success {
+                                    (Ok(res), url) => {
+                                        let status = res.status();
+                                        let body = res.text().await.unwrap_or("Missing body".into());
+                                        if status.is_success() {
+                                            info!("[Check Sources] succeed for url {} with body {}", &url, body);
 
-                                        match r_send.send(Message::Activity(source.id, url.clone())).await {
-                                            Ok(_) => {
-                                                info!("[Check Sources] Sent Activity ({}, {})", source.id, url.clone());
-                                            },
-                                            Err(err) => {
-                                                error!("[Check Sources] Failed to send down channel for id {} and url {} with err {}", source.id, &url, err);
-                                            },
+                                            match r_send.send(Message::Activity(source.id, url.clone())).await {
+                                                Ok(_) => {
+                                                    info!("[Check Sources] Sent Activity ({}, {})", source.id, url.clone());
+                                                },
+                                                Err(err) => {
+                                                    error!("[Check Sources] Failed to send down channel for id {} and url {} with err {}", source.id, &url, err);
+                                                },
+                                            }
+                                        } else {
+                                            error!("[Check Status] failed for url {} with status code {} and body {}", url, status, body);
                                         }
-                                    } else {
-                                        error!("[Check Status] failed for url {} with status code {} and body {}", url, status, body);
-                                    }
-                                },
-                                (Err(err), url) => {
-                                    error!("[Check Sources] Email request for {} failed with err {}", url, err);
-                                },
+                                    },
+                                    (Err(err), url) => {
+                                        error!("[Check Sources] Email request for {} failed with err {}", url, err);
+                                    },
+                                }
+                                #[cfg(not(feature = "mail"))]
+                                match r_send.send(Message::Activity(source.id, success.clone())).await {
+                                    Ok(_) => {
+                                        info!("[Check Sources] Sent Activity ({}, {})", source.id, success.clone());
+                                    },
+                                    Err(err) => {
+                                        error!("[Check Sources] Failed to send down channel for id {} and url {} with err {}", source.id, &success, err);
+                                    },
+                                }
                             },
                             Err(err) => {
                                 error!("[Check Sources] unknown email request failed with err {}", err);
@@ -225,35 +235,44 @@ pub async fn check_sources(data: &AppData) {
                 });
             }
 
-            // Drop Sender so receiver closes when all threads terminate
-            drop(act_send);
-
             let mut count = 0;
+            let mut failed = Vec::new();
+            let db = data.db.connect().unwrap();
             while let Some(m) = act_recv.recv().await {
-                let stmnt = match m {
-                    Message::Activity(id, url) => Statement::with_args(
-                        "INSERT INTO activities (source_id, post_url, timestamp) VALUES (?, ?, ?)",
-                        args!(id, url, serde_json::to_string(&start_time).unwrap(),),
-                    ),
-                    Message::Source(id, most_recent) => Statement::with_args(
-                        "UPDATE sources SET last_checked = ? WHERE id = ?",
-                        args!(serde_json::to_string(&most_recent).unwrap(), id,),
-                    ),
+                match m {
+                    Message::Activity(id, url) => {
+                        let result = db
+                            .execute(
+                                &format!(
+                                    "INSERT INTO {ACTIVITIES_T} 
+                                        (source_id, post_url, timestamp) 
+                                    VALUES 
+                                        (?1, ?2, ?3)
+                                    "
+                                ),
+                                (id, url, serde_json::to_string(&start_time).unwrap()),
+                            )
+                            .await;
+
+                        if let Err(e) = result {
+                            failed.push(e);
+                        }
+                    }
+                    Message::Source(id, most_recent) => {
+                        let result = db
+                            .execute(
+                                &format!("UPDATE {SOURCES_T} SET last_checked = ?1 WHERE id = ?2"),
+                                (serde_json::to_string(&most_recent).unwrap(), id),
+                            )
+                            .await;
+
+                        if let Err(e) = result {
+                            failed.push(e);
+                        }
+                    }
                 };
 
-                let _ = data.db_channel.send((stmnt, db_send.clone())).await;
                 count += 1;
-            }
-
-            // Drop Sender so receiver closes when db has fulfilled all requests
-            drop(db_send);
-
-            let mut failed = Vec::new();
-            while let Some(res) = db_recv.recv().await {
-                match res {
-                    Ok(_) => {}
-                    Err(err) => failed.push(err),
-                }
             }
 
             if !failed.is_empty() {
