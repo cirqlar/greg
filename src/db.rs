@@ -1,15 +1,23 @@
 use std::env;
 
-use libsql::{Builder, Connection, Database};
+use libsql::{Builder, Connection, Database, OpenFlags};
 
 pub async fn get_database() -> Database {
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let auth_key = env::var("DATABASE_AUTH_KEY").expect("DATABASE_AUTH_KEY must be set");
-
-    Builder::new_remote(database_url, auth_key)
-        .build()
-        .await
-        .unwrap()
+    let use_local = env::var("USE_LOCAL").unwrap_or("false".into());
+    if use_local == "false" {
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let auth_key = env::var("DATABASE_AUTH_KEY").expect("DATABASE_AUTH_KEY must be set");
+        Builder::new_remote(database_url, auth_key)
+            .build()
+            .await
+            .unwrap()
+    } else {
+        Builder::new_local(env::var("LOCAL_DB_URL").expect("LOCAL_DB_URL must be set"))
+            .flags(OpenFlags::default())
+            .build()
+            .await
+            .unwrap()
+    }
 }
 
 pub const SOURCES_T: &str = "sources";
