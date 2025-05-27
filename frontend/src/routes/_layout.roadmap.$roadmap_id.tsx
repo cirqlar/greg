@@ -75,14 +75,28 @@ function Roadmap() {
 
 			let current_card_description = null;
 			let previous_card_description = null;
+	
 			if (c.type == "card_added" || c.type == "card_modified") {
-				current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p className="px-2">{s}</p>)
+				current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p className="px-2 break-words">{s}</p>)
 			}
 			if (c.type == "card_removed" || c.type == "card_modified") {
-				previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p className="px-2">{s}</p>)
+				previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p className="px-2 break-words">{s}</p>)
 			}
 
-			return { ...c, current_card_description, previous_card_description };
+			const changes = [];
+			if (c.type == "card_modified") {
+				if (c.current_card_name != c.previous_card_name) {
+					changes.push("Title");
+				}
+				if (c.current_card_description != c.previous_card_description) {
+					changes.push("Description");
+				}
+				if (c.current_card_image_url != c.previous_card_image_url) {
+					changes.push("Image");
+				}
+			}
+
+			return { ...c, current_card_description, previous_card_description, ...(c.type == "card_modified" ? { changes: changes.join(", ") } : {}) };
 		})
 
 	, [roadmapChanges.data])
@@ -124,36 +138,38 @@ function Roadmap() {
 				<div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
 					{roadmapChangesMapped.map(change => {
 						if (change.type === "tab_added") {
-							return <div className="col-span-full">Tab added: {change.tab_name}</div>;
+							return <div className="col-span-full">Tab added: {change.tab_name} <a target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}tabs/${change.tab_slug}`}>link</a></div>;
 						} else if (change.type === "tab_removed") {
 							return <div className="col-span-full">Tab removed: {change.tab_name}</div>;
 						} else if (change.type === "card_added") {
 							return (
 								<div className="flex flex-col border-2 rounded border-green-700 overflow-hidden pb-2 text-sm">
-									{/* Todo: image display */}
-									<div className="w-full aspect-video mb-2">{change.current_card_image_url && <img className="w-full h-full object-cover" src={change.current_card_image_url} />}</div>
-									<h3 className="text-xl px-2 mb-2">{change.current_card_name}</h3>
+									<div className="w-full aspect-video mb-2">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
+									<h3 className="text-xl px-2 mb-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}c/${change.current_card_slug}`}>link</a></h3>
 									{change.current_card_description}
 								</div>
 							);
 						} else if (change.type === "card_removed") {
 							return (
 								<div className="flex flex-col border-2 rounded border-red-700 overflow-hidden pb-2 text-sm">
-									{/* Todo: image display */}
-									<div className="w-full aspect-video mb-2">{change.previous_card_image_url && <img className="w-full h-full object-cover" src={change.previous_card_image_url} />}</div>
-									<h3 className="text-xl px-2 mb-2">{change.previous_card_name}</h3>
+									{/* Image resource is removed with card it seems */}
+									{/* <div className="w-full aspect-video mb-2">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div> */}
+									<h3 className="text-xl pt-2 px-2 mb-2">{change.previous_card_name}</h3>
 									{change.previous_card_description}
 								</div>
 							);
 						} else if (change.type === "card_modified"){
 							return (
-								<div className="grid grid-cols-2 gap-4 col-span-2 border-2 rounded border-blue-700 overflow-hidden pb-2 text-sm">
-									<div className="w-full aspect-video">{change.current_card_image_url && <img className="w-full h-full object-cover" src={change.current_card_image_url} />}</div>
-									<div className="w-full aspect-video">{change.previous_card_image_url && <img className="w-full h-full object-cover" src={change.previous_card_image_url} />}</div>
-									<div><h3 className="text-xl px-2">{change.current_card_name}</h3></div>
+								<div className="grid grid-cols-2 gap-4 col-span-full border-2 rounded border-blue-700 overflow-hidden pb-2 text-sm">
+									<div className="w-full aspect-video">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div>
+									<div className="w-full aspect-video">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
+									<div className="col-span-full px-2">
+										Changes: {change.changes}
+									</div>
 									<div><h3 className="text-xl px-2">{change.previous_card_name}</h3></div>
-									<div>{change.current_card_description}</div>
+									<div><h3 className="text-xl px-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}c/${change.current_card_slug}`}>link</a></h3></div>
 									<div>{change.previous_card_description}</div>
+									<div>{change.current_card_description}</div>
 								</div>
 							);
 						}

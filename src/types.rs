@@ -309,17 +309,20 @@ impl RDBChangeAlt {
         s = s.replace("<span data-preserve-white-space></span>", "\n");
         s = s.replace("<p>", "\n");
         s = s.replace("</p>", "");
+        s = s.replace("\\(", "(");
+        s = s.replace("\\)", ")");
+        s = s.replace("\\/", "/");
+        s = s.replace("\\+", "+");
+        s = s.replace("**", "");
 
         // Remove . that isn't \.
         info!("Started cleaning .");
         loop {
-            let Some(index) =
-                s.chars()
-                    .tuple_windows()
-                    .enumerate()
-                    .find_map(|(index, (one, us))| {
-                        (one != '\\' && one != '\t' && us == '.').then_some(index)
-                    })
+            let Some(index) = s
+                .chars()
+                .tuple_windows()
+                .enumerate()
+                .find_map(|(index, (one, us))| (one == ' ' && us == '.').then_some(index))
             else {
                 break;
             };
@@ -329,13 +332,11 @@ impl RDBChangeAlt {
         // Remove - that isn't \-
         info!("Started cleaning -");
         loop {
-            let Some(index) =
-                s.chars()
-                    .tuple_windows()
-                    .enumerate()
-                    .find_map(|(index, (one, us))| {
-                        (one != '\\' && one != '\t' && us == '-').then_some(index)
-                    })
+            let Some(index) = s
+                .chars()
+                .tuple_windows()
+                .enumerate()
+                .find_map(|(index, (one, us))| (one == ' ' && us == '-').then_some(index))
             else {
                 break;
             };

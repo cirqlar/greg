@@ -15,7 +15,7 @@ pub async fn get_roadmap_json() -> anyhow::Result<String> {
     let client = reqwest::Client::new();
 
     let res = client
-        .get(env::var("ROADMAP_URL").expect("ROADMAP_URL exists"))
+        .get(env::var("VITE_ROADMAP_URL").expect("VITE_ROADMAP_URL exists"))
         .send()
         .await?;
 
