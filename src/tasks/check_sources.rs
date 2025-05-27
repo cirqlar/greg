@@ -234,6 +234,7 @@ pub async fn check_sources(data: &AppData) {
                 });
             }
 
+            // Drop Sender so receiver closes when all threads terminate
             drop(act_send);
 
             let mut count = 0;
