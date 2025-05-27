@@ -10,27 +10,27 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.18.1",
-    "@tanstack/react-router": "^1.15.22",
-    "@tanstack/react-table": "^8.11.8",
-    "dayjs": "^1.11.10",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@tanstack/react-query": "^5.77.2",
+    "@tanstack/react-router": "^1.120.10",
+    "@tanstack/react-table": "^8.21.3",
+    "dayjs": "^1.11.13",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@tanstack/router-vite-plugin": "^1.15.22",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.17",
+    "@tanstack/router-vite-plugin": "^1.120.10",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.55.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
   }
 }

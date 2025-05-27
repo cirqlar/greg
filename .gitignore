@@ -1,5 +1,6 @@
 /target
 .env
+/tmp
 
 # Logs
 logs

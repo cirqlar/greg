@@ -5,3 +5,7 @@
 .template_3 {
 	grid-template-columns: auto minmax(0, 2fr) minmax(0, 1fr) auto;
 }
+
+.template_2 {
+	grid-template-columns: 1fr 1fr auto;
+}

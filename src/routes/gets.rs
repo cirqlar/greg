@@ -1,22 +1,22 @@
 use crate::{
-    types::{
-        Activity, AppData, DbReturnReciever, DbReturnSender, Failure, FromRow, Source,
-        LOGGED_IN_COOKIE,
+    queries::{
+        roadmap::{
+            self, get_most_recent_roadmap_tabs, get_roadmap_activities, get_roadmap_changes,
+        },
+        sources,
     },
+    types::{AppData, Failure, LOGGED_IN_COOKIE},
     utils::{is_logged_in, return_password_error},
 };
 
-use actix_web::{cookie::Cookie, get, HttpRequest, HttpResponse, Responder};
-use libsql_client::{Row, Statement};
+use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, get, web};
 use log::{error, info};
 use serde_json::json;
-use tokio::sync::mpsc;
 
 #[get("/check-logged-in")]
 pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder {
-    let (send, mut recv) = mpsc::channel(100);
-
-    let logged_in = is_logged_in(&req, &data, send, &mut recv).await;
+    let db = data.db.connect().unwrap();
+    let logged_in = is_logged_in(&req, db).await;
     let mut res = HttpResponse::Ok();
     if !logged_in {
         let mut c = Cookie::build(LOGGED_IN_COOKIE, "").finish();
@@ -34,46 +34,12 @@ pub async fn keep_alive() -> impl Responder {
     }))
 }
 
-pub async fn get_sources_inner<T>(
-    data: &AppData,
-    send: DbReturnSender,
-    recv: &mut DbReturnReciever,
-    transform: fn(Row) -> anyhow::Result<T>,
-) -> anyhow::Result<Vec<T>> {
-    let _ = data
-        .db_channel
-        .send((Statement::from("SELECT * FROM sources"), send))
-        .await;
-    let result = recv.recv().await.unwrap()?;
-
-    let sources = result
-        .rows
-        .into_iter()
-        .filter_map(|row| {
-            let ret = transform(row);
-
-            if ret.is_err() {
-                error!(
-                    "[Get Sources Inner] Failed to parse row with err: {}",
-                    ret.err().unwrap()
-                );
-                None
-            } else {
-                ret.ok()
-            }
-        })
-        .collect::<Vec<_>>();
-
-    Ok(sources)
-}
-
 #[get("/sources")]
 pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
-    let (send, mut recv) = mpsc::channel(100);
-
-    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
         info!("[Get Sources] Getting sources from db");
-        match get_sources_inner(&data, send.clone(), &mut recv, Source::from_row).await {
+        match sources::get_sources(db).await {
             Ok(sources) => {
                 info!("[Get Sources] Got sources successfully");
                 HttpResponse::Ok().json(sources)
@@ -93,56 +59,16 @@ pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
 
 #[get("/activity")]
 pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
-    let (send, mut recv) = mpsc::channel(100);
-
-    if is_logged_in(&req, &data, send.clone(), &mut recv).await {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
-
-        let _ = data
-            .db_channel
-            .send((
-                Statement::from(
-                    "SELECT 
-                        activities.id, 
-                        activities.post_url, 
-                        activities.timestamp, 
-                        sources.url 
-                    FROM activities 
-                    INNER JOIN sources ON activities.source_id = sources.id
-                    ORDER BY activities.id DESC
-                    LIMIT 35",
-                ),
-                send.clone(),
-            ))
-            .await;
-        let Some(result) = recv.recv().await else {
-            unreachable!();
-        };
-        match result {
-            Ok(success) => {
-                let activities = success
-                    .rows
-                    .into_iter()
-                    .filter_map(|row| {
-                        let ret = Activity::from_row(row);
-
-                        if ret.is_err() {
-                            error!(
-                                "[Get Activity] Failed to parse row with err: {}",
-                                ret.err().unwrap()
-                            );
-                            None
-                        } else {
-                            ret.ok()
-                        }
-                    })
-                    .collect::<Vec<_>>();
-
+        match sources::get_activity(db, 35, 0).await {
+            Ok(activities) => {
                 info!("[Get Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)
             }
             Err(err) => {
-                error!("[Get Activity] Getting sources failed with err: {}", err);
+                error!("[Get Activity] Getting activities failed with err: {}", err);
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't get activities. Err: {}", err),
                 })
@@ -150,6 +76,116 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
         }
     } else {
         error!("[Get Activity] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/roadmap_activity")]
+pub async fn get_roadmap_activity(data: AppData, req: HttpRequest) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Roadmap Activity] Getting activities from db");
+
+        match get_roadmap_activities(db, 35, 0).await {
+            Ok(activities) => {
+                info!("[Get Roadmap Activity] Got activities successfully");
+                HttpResponse::Ok().json(activities)
+            }
+            Err(err) => {
+                error!(
+                    "[Get Roadmap Activity] Getting roadmap activities failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get roadmap activities. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Get Roadmap Activity] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/most_recent_tabs")]
+pub async fn get_most_recent_tabs(data: AppData, req: HttpRequest) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Roadmap Tabs] Getting most recent tabs from db");
+
+        match get_most_recent_roadmap_tabs(db).await {
+            Ok(tabs) => {
+                info!("[Get Roadmap Tabs] Got tabs successfully");
+                HttpResponse::Ok().json(tabs)
+            }
+            Err(err) => {
+                error!(
+                    "[Get Roadmap Tabs] Getting roadmap tabs failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get roadmap tabs. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Get Roadmap Tabs] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/watched_tabs")]
+pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Watched Tabs] Getting watched tabs from db");
+
+        match roadmap::get_watched_tabs(db).await {
+            Ok(watched_tabs) => {
+                info!("[Get Watched Tabs] Got watched tabs successfully");
+                HttpResponse::Ok().json(watched_tabs)
+            }
+            Err(err) => {
+                error!(
+                    "[Get Watched Tabs] Getting watched tabs failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get watched tabs. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Get Watched Tabs] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/roadmap_activity/{id}")]
+pub async fn get_changes(path: web::Path<u32>, data: AppData, req: HttpRequest) -> impl Responder {
+    let activity_id = path.into_inner();
+
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Roadmap Changes] Getting changes from db");
+
+        match get_roadmap_changes(db, activity_id).await {
+            Ok(changes) => {
+                info!("[Get Roadmap Changes] Got changes successfully");
+                HttpResponse::Ok().json(changes)
+            }
+            Err(err) => {
+                error!(
+                    "[Get Roadmap Changes] Getting roadmap changes failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get roadmap changes. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Get Roadmap Changes] Failed due to auth error");
         return_password_error()
     }
 }

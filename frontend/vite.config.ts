@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:10000',
+      '/api': 'http://0.0.0.0:10000',
     },
   },
 })
