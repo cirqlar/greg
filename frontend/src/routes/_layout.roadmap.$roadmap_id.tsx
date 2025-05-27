@@ -120,14 +120,14 @@ function Roadmap() {
 					<div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
 						{roadmapChangesMapped.map(change => {
 							if (change.type === "tab_added") {
-								return <div className="col-span-full">Tab added: {change.tab_name} <a target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}tabs/${change.tab_slug}`}>link</a></div>;
+								return <div className="col-span-full">Tab added: {change.tab_name} <a target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${change.tab_slug}`}>link</a></div>;
 							} else if (change.type === "tab_removed") {
 								return <div className="col-span-full">Tab removed: {change.tab_name}</div>;
 							} else if (change.type === "card_added") {
 								return (
 									<div className="flex flex-col border-2 rounded border-green-700 overflow-hidden pb-2 text-sm">
 										<div className="w-full aspect-video mb-2">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
-										<h3 className="text-xl px-2 mb-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}c/${change.current_card_slug}`}>link</a></h3>
+										<h3 className="text-xl px-2 mb-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}>link</a></h3>
 										{change.current_card_description}
 									</div>
 								);
@@ -149,7 +149,7 @@ function Roadmap() {
 											Changes: {change.changes}
 										</div>
 										<div><h3 className="text-xl px-2">{change.previous_card_name}</h3></div>
-										<div><h3 className="text-xl px-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}c/${change.current_card_slug}`}>link</a></h3></div>
+										<div><h3 className="text-xl px-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}>link</a></h3></div>
 										<div>{change.previous_card_description}</div>
 										<div>{change.current_card_description}</div>
 									</div>

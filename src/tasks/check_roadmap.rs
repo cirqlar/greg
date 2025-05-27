@@ -844,10 +844,14 @@ pub async fn check_roadmap(data: &AppData) {
                     )
                 })
                 .count();
+            let base_url = env::var("VITE_BASE_URL").unwrap_or("Missing base url".into());
             let res = crate::queries::mail::send_email(
                 &format!("{} new changes on roadmap", count),
-                "TODO: Add url to changes",
-                "TODO: Add url to changes",
+                &format!("{}/roadmap/{}", base_url, roadmap_id),
+                &format!(
+                    r#"<a href="{}/roadmap/{}">View changes</a>"#,
+                    base_url, roadmap_id
+                ),
             )
             .await;
 
