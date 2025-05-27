@@ -4,9 +4,10 @@ use libsql::{Connection, de, params};
 
 use crate::{
     db::{
-        R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T,
+        R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TAB_ASSIGNS_T, R_TABS_T,
+        R_WATCHED_TABS_T,
     },
-    types::{RCard, RTab, Roadmap, RoadmapActivity, RoadmapWatchedTab},
+    types::{RCard, RDBChangeAlt, RTab, Roadmap, RoadmapActivity, RoadmapWatchedTab},
 };
 
 pub async fn get_most_recent_roadmap(db: Connection) -> anyhow::Result<Option<Roadmap>> {
@@ -158,4 +159,48 @@ pub async fn get_most_recent_roadmap_tabs(db: Connection) -> anyhow::Result<Vec<
     let activity: RoadmapActivity = de::from_row(&r)?;
 
     get_roadmap_tabs(db.clone(), activity.id).await
+}
+
+pub async fn get_roadmap_changes(
+    db: Connection,
+    activity_id: u32,
+) -> anyhow::Result<Vec<RDBChangeAlt>> {
+    let mut result = db
+        .query(
+            &format!(
+                "SELECT
+                    rch.id, rch.type,
+
+                    rc1.id AS previous_card_db_id, rc1.roadmap_id AS previous_card_id,
+                    rc1.name AS previous_card_name, rc1.description AS previous_card_description,
+                    rc1.image_url  AS previous_card_image_url, rc1.slug AS previous_card_slug,
+
+                    rc2.id AS current_card_db_id, rc2.roadmap_id AS current_card_id,
+                    rc2.name AS current_card_name, rc2.description AS current_card_description,
+                    rc2.image_url  AS current_card_image_url, rc2.slug AS current_card_slug,
+
+                    rt.id AS tab_db_id, rt.roadmap_id AS tab_id,
+                    rt.name AS tab_name, rt.slug AS tab_slug
+                FROM {R_CHANGES_T} AS rch
+                LEFT JOIN {R_CARDS_T} as rc1
+                    ON rch.previous_card_id = rc1.id
+                LEFT JOIN {R_CARDS_T} as rc2
+                    ON rch.current_card_id = rc2.id
+                LEFT JOIN {R_TABS_T} as rt
+                    ON rch.tab_id = rt.id
+                WHERE rch.activity_id = ?1
+                "
+            ),
+            [activity_id],
+        )
+        .await?;
+
+    let mut changes = Vec::new();
+    while let Some(r) = result.next().await? {
+        let mut c: RDBChangeAlt = de::from_row(&r)?;
+        c.clean_descriptions();
+        changes.push(c);
+    }
+
+    Ok(changes)
 }

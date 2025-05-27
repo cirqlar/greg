@@ -1,8 +1,11 @@
 use std::{collections::HashMap, fmt::Display, hash::Hash};
 
 use actix_web::web;
+use itertools::Itertools;
 use libsql::Database;
+use log::info;
 use serde::{Deserialize, Serialize, de, ser};
+use serde_with::with_prefix;
 use time::{OffsetDateTime, format_description};
 
 pub const LOGGED_IN_COOKIE: &str = "logged_in";
@@ -69,7 +72,6 @@ pub struct RTab {
     pub id: String,
     pub name: String,
     pub slug: String,
-    #[serde(default)]
     pub db_id: Option<u32>,
 }
 
@@ -203,6 +205,163 @@ pub enum RChange {
     TabCardsNotInPrevious {
         tab_index: u32,
     },
+}
+
+with_prefix!(prefix_previous_card "previous_card_");
+with_prefix!(prefix_current_card "current_card_");
+with_prefix!(prefix_tab "tab_");
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RDBChange {
+    id: u32,
+    r#type: String,
+    #[serde(flatten, with = "prefix_previous_card")]
+    previous_card: Option<RCard>,
+    #[serde(flatten, with = "prefix_current_card")]
+    current_card: Option<RCard>,
+    #[serde(flatten, with = "prefix_tab")]
+    tab: Option<RTab>,
+}
+
+/// libsql crate's deserializer does not support flattened fields turns out
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RDBChangeAlt {
+    id: u32,
+    r#type: String,
+
+    pub previous_card_id: Option<String>,
+    pub previous_card_name: Option<String>,
+    pub previous_card_description: Option<String>,
+    pub previous_card_image_url: Option<String>,
+    pub previous_card_slug: Option<String>,
+    pub previous_card_db_id: Option<u32>,
+
+    pub current_card_id: Option<String>,
+    pub current_card_name: Option<String>,
+    pub current_card_description: Option<String>,
+    pub current_card_image_url: Option<String>,
+    pub current_card_slug: Option<String>,
+    pub current_card_db_id: Option<u32>,
+
+    pub tab_id: Option<String>,
+    pub tab_name: Option<String>,
+    pub tab_slug: Option<String>,
+    pub tab_db_id: Option<u32>,
+}
+
+impl RDBChangeAlt {
+    pub fn into(self) -> RDBChange {
+        let previous_card = if let Some(id) = self.previous_card_id {
+            Some(RCard {
+                id,
+                name: self.previous_card_name.unwrap(),
+                description: self.previous_card_description.unwrap(),
+                image_url: self.previous_card_image_url,
+                slug: self.previous_card_slug.unwrap(),
+                db_id: self.previous_card_db_id,
+                section_position: None,
+                card_position: None,
+                assign_db_id: None,
+                tab_id: None,
+            })
+        } else {
+            None
+        };
+
+        let current_card = if let Some(id) = self.current_card_id {
+            Some(RCard {
+                id,
+                name: self.current_card_name.unwrap(),
+                description: self.current_card_description.unwrap(),
+                image_url: self.current_card_image_url,
+                slug: self.current_card_slug.unwrap(),
+                db_id: self.current_card_db_id,
+                section_position: None,
+                card_position: None,
+                assign_db_id: None,
+                tab_id: None,
+            })
+        } else {
+            None
+        };
+
+        let tab = if let Some(id) = self.tab_id {
+            Some(RTab {
+                id,
+                name: self.tab_name.unwrap(),
+                slug: self.tab_slug.unwrap(),
+                db_id: self.tab_db_id,
+            })
+        } else {
+            None
+        };
+
+        RDBChange {
+            id: self.id,
+            r#type: self.r#type,
+            previous_card,
+            current_card,
+            tab,
+        }
+    }
+
+    pub fn clean_description(mut s: String) -> String {
+        s = s.replace("<span data-preserve-white-space></span>", "\n");
+        s = s.replace("<p>", "\n");
+        s = s.replace("</p>", "");
+
+        // Remove . that isn't \.
+        info!("Started cleaning .");
+        loop {
+            let Some(index) =
+                s.chars()
+                    .tuple_windows()
+                    .enumerate()
+                    .find_map(|(index, (one, us))| {
+                        (one != '\\' && one != '\t' && us == '.').then_some(index)
+                    })
+            else {
+                break;
+            };
+            s.replace_range(index..(index + 2), "\n\t.");
+        }
+
+        // Remove - that isn't \-
+        info!("Started cleaning -");
+        loop {
+            let Some(index) =
+                s.chars()
+                    .tuple_windows()
+                    .enumerate()
+                    .find_map(|(index, (one, us))| {
+                        (one != '\\' && one != '\t' && us == '-').then_some(index)
+                    })
+            else {
+                break;
+            };
+            s.replace_range(index..(index + 2), "\n\t-");
+        }
+
+        info!("Started cleaning rest");
+        // unescape
+        s = s.replace("\\.", ".");
+        s = s.replace("\\-", "-");
+
+        s
+    }
+
+    pub fn clean_descriptions(&mut self) {
+        info!("Started cleaning current");
+        self.current_card_description = self
+            .current_card_description
+            .take()
+            .map(RDBChangeAlt::clean_description);
+        info!("Started cleaning previous");
+        self.previous_card_description = self
+            .previous_card_description
+            .take()
+            .map(RDBChangeAlt::clean_description);
+    }
 }
 
 // Server Types

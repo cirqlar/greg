@@ -11,8 +11,8 @@ use greg::{
     routes::{
         deletes::{clear_activities, clear_all_activities, delete_source, delete_watched_tab},
         gets::{
-            check_logged_in, get_activity, get_most_recent_tabs, get_roadmap_activity, get_sources,
-            get_watched_tabs, keep_alive,
+            check_logged_in, get_activity, get_changes, get_most_recent_tabs, get_roadmap_activity,
+            get_sources, get_watched_tabs, keep_alive,
         },
         posts::{add_source, add_watched_tab, login, recheck, recheck_roadmap},
     },
@@ -96,14 +96,14 @@ async fn main() -> anyhow::Result<()> {
                     .service(delete_source)
                     .service(clear_all_activities)
                     .service(clear_activities)
-                    // .service(trigger_check)
                     .service(keep_alive)
                     .service(get_roadmap_activity)
                     .service(get_most_recent_tabs)
                     .service(get_watched_tabs)
                     .service(recheck_roadmap)
                     .service(add_watched_tab)
-                    .service(delete_watched_tab),
+                    .service(delete_watched_tab)
+                    .service(get_changes),
             )
             .service(
                 spa()

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	createColumnHelper,
 	flexRender,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_layout/roadmaps")({
 });
 
 type TRoadmapActivity = {
-	id: string;
+	id: number;
 	timestamp: string;
 };
 type TWatchedTab = {
@@ -50,16 +50,13 @@ const roadmapColumns = [
 	roadmapColumnHelper.display({
 		id: "viewChanges",
 		cell: (props) => (
-			<button
-				className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
-				onClick={async (e) => {
-					e.preventDefault();
-					console.log(props.row.original.id);
-					// TODO: Change to link when change page is available
-				}}
+			<Link
+				to="/roadmap/$roadmap_id"
+				params={{ roadmap_id: props.row.original.id.toString() }}
+				className="bg-green-700 text-inherit inline-block px-4 py-3 uppercase font-bold rounded"
 			>
 				Changes
-			</button>
+			</Link>
 		),
 	}),
 ];

@@ -822,8 +822,21 @@ pub async fn check_roadmap(data: &AppData) {
         #[cfg(feature = "mail")]
         if _should_notify {
             // send email that there are changes
+            let count = changes
+                .iter()
+                .filter(|c| {
+                    matches!(
+                        c,
+                        RChange::CardAdded { .. }
+                            | RChange::CardModified { .. }
+                            | RChange::CardRemoved { .. }
+                            | RChange::TabAdded { .. }
+                            | RChange::TabRemoved { .. }
+                    )
+                })
+                .count();
             let res = crate::queries::mail::send_email(
-                "New changes on roadmap",
+                &format!("{} new changes on roadmap", count),
                 "TODO: Add url to changes",
                 "TODO: Add url to changes",
             )

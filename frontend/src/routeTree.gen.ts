@@ -16,6 +16,7 @@ import { Route as IndexImport } from './routes/index'
 import { Route as LayoutSourcesImport } from './routes/_layout.sources'
 import { Route as LayoutRoadmapsImport } from './routes/_layout.roadmaps'
 import { Route as LayoutActivityImport } from './routes/_layout.activity'
+import { Route as LayoutRoadmapRoadmapidImport } from './routes/_layout.roadmap.$roadmap_id'
 
 // Create/Update Routes
 
@@ -45,6 +46,12 @@ const LayoutRoadmapsRoute = LayoutRoadmapsImport.update({
 const LayoutActivityRoute = LayoutActivityImport.update({
   id: '/activity',
   path: '/activity',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutRoadmapRoadmapidRoute = LayoutRoadmapRoadmapidImport.update({
+  id: '/roadmap/$roadmap_id',
+  path: '/roadmap/$roadmap_id',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -87,6 +94,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSourcesImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/roadmap/$roadmap_id': {
+      id: '/_layout/roadmap/$roadmap_id'
+      path: '/roadmap/$roadmap_id'
+      fullPath: '/roadmap/$roadmap_id'
+      preLoaderRoute: typeof LayoutRoadmapRoadmapidImport
+      parentRoute: typeof LayoutImport
+    }
   }
 }
 
@@ -96,12 +110,14 @@ interface LayoutRouteChildren {
   LayoutActivityRoute: typeof LayoutActivityRoute
   LayoutRoadmapsRoute: typeof LayoutRoadmapsRoute
   LayoutSourcesRoute: typeof LayoutSourcesRoute
+  LayoutRoadmapRoadmapidRoute: typeof LayoutRoadmapRoadmapidRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutActivityRoute: LayoutActivityRoute,
   LayoutRoadmapsRoute: LayoutRoadmapsRoute,
   LayoutSourcesRoute: LayoutSourcesRoute,
+  LayoutRoadmapRoadmapidRoute: LayoutRoadmapRoadmapidRoute,
 }
 
 const LayoutRouteWithChildren =
@@ -113,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
 }
 
 export interface FileRoutesByTo {
@@ -121,6 +138,7 @@ export interface FileRoutesByTo {
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
 }
 
 export interface FileRoutesById {
@@ -130,13 +148,20 @@ export interface FileRoutesById {
   '/_layout/activity': typeof LayoutActivityRoute
   '/_layout/roadmaps': typeof LayoutRoadmapsRoute
   '/_layout/sources': typeof LayoutSourcesRoute
+  '/_layout/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '' | '/activity' | '/roadmaps' | '/sources'
+  fullPaths:
+    | '/'
+    | ''
+    | '/activity'
+    | '/roadmaps'
+    | '/sources'
+    | '/roadmap/$roadmap_id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '' | '/activity' | '/roadmaps' | '/sources'
+  to: '/' | '' | '/activity' | '/roadmaps' | '/sources' | '/roadmap/$roadmap_id'
   id:
     | '__root__'
     | '/'
@@ -144,6 +169,7 @@ export interface FileRouteTypes {
     | '/_layout/activity'
     | '/_layout/roadmaps'
     | '/_layout/sources'
+    | '/_layout/roadmap/$roadmap_id'
   fileRoutesById: FileRoutesById
 }
 
@@ -179,7 +205,8 @@ export const routeTree = rootRoute
       "children": [
         "/_layout/activity",
         "/_layout/roadmaps",
-        "/_layout/sources"
+        "/_layout/sources",
+        "/_layout/roadmap/$roadmap_id"
       ]
     },
     "/_layout/activity": {
@@ -192,6 +219,10 @@ export const routeTree = rootRoute
     },
     "/_layout/sources": {
       "filePath": "_layout.sources.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/roadmap/$roadmap_id": {
+      "filePath": "_layout.roadmap.$roadmap_id.tsx",
       "parent": "/_layout"
     }
   }

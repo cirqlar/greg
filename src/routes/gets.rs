@@ -1,13 +1,15 @@
 use crate::{
     queries::{
-        roadmap::{self, get_most_recent_roadmap_tabs, get_roadmap_activities},
+        roadmap::{
+            self, get_most_recent_roadmap_tabs, get_roadmap_activities, get_roadmap_changes,
+        },
         sources,
     },
     types::{AppData, Failure, LOGGED_IN_COOKIE},
     utils::{is_logged_in, return_password_error},
 };
 
-use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, get};
+use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, get, web};
 use log::{error, info};
 use serde_json::json;
 
@@ -155,6 +157,35 @@ pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder
         }
     } else {
         error!("[Get Watched Tabs] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/roadmap_activity/{id}")]
+pub async fn get_changes(path: web::Path<u32>, data: AppData, req: HttpRequest) -> impl Responder {
+    let activity_id = path.into_inner();
+
+    let db = data.db.connect().unwrap();
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Roadmap Changes] Getting changes from db");
+
+        match get_roadmap_changes(db, activity_id).await {
+            Ok(changes) => {
+                info!("[Get Roadmap Changes] Got changes successfully");
+                HttpResponse::Ok().json(changes)
+            }
+            Err(err) => {
+                error!(
+                    "[Get Roadmap Changes] Getting roadmap changes failed with err: {}",
+                    err
+                );
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get roadmap changes. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Get Roadmap Changes] Failed due to auth error");
         return_password_error()
     }
 }
