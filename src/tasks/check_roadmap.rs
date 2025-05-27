@@ -13,13 +13,6 @@ use crate::{
 };
 
 pub async fn get_roadmap_json() -> anyhow::Result<String> {
-    if false {
-        return Ok(include_str!("../../tmp/red_modified.json").into());
-    }
-    if false {
-        return Ok(include_str!("../../tmp/blue_modified.json").into());
-    }
-
     let client = reqwest::Client::new();
 
     let res = client
