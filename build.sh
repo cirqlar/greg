@@ -3,4 +3,4 @@ cd ./frontend
 npm install
 npm run build
 cd ..
-cargo build --release
+cargo build --release --features mail,scheduler

@@ -16,11 +16,12 @@ use greg::{
         },
         posts::{add_source, add_watched_tab, login, recheck, recheck_roadmap},
     },
-    tasks::check_roadmap::check_roadmap,
     types::AppState,
 };
 use log::info;
 
+#[cfg(feature = "scheduler")]
+use greg::tasks::check_roadmap::check_roadmap;
 #[cfg(feature = "scheduler")]
 use greg::tasks::check_sources::check_sources;
 #[cfg(feature = "scheduler")]
