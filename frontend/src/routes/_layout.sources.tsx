@@ -24,7 +24,20 @@ function Sources() {
 	const queryClient = useQueryClient();
 	const sources = useQuery<TSource[]>({
 		queryKey: ["sources"],
-		queryFn: () => fetch("/api/sources").then((res) => res.json()),
+		queryFn: () => fetch("/api/sources").then(async (res) => {
+			if (res.ok) {
+				return res.json();
+			} else {
+				let err;
+				try {
+					err = await res.json();
+				} catch {
+					err = "Non-json return from response";
+				}
+				console.log("Error fetching sources", err);
+				throw err;
+			}
+		}),
 	});
 
 	const addSource = useMutation({
@@ -139,35 +152,43 @@ function Sources() {
 
 			<div className="max-w-4xl mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Sources</h3>
-				<TableGrid className={style.template_3}>
-					<Fragment>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<Fragment key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<div key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					<Fragment>
-						{table.getRowModel().rows.map((row) => (
-							<Fragment key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<div key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-				</TableGrid>
+				{sources.isError ? 
+					<p>There's been an error fetching sources</p>
+				: sources.isPending ?
+					<p>Fetching sources...</p>
+				: sources.data.length == 0 ?
+					<p>There are no saved sources</p>
+				: (
+					<TableGrid className={style.template_3}>
+						<Fragment>
+							{table.getHeaderGroups().map((headerGroup) => (
+								<Fragment key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<div key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+						<Fragment>
+							{table.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<div key={cell.id}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+					</TableGrid>
+				)}
 			</div>
 		</>
 	);

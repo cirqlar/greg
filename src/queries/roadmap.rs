@@ -197,8 +197,7 @@ pub async fn get_roadmap_changes(
 
     let mut changes = Vec::new();
     while let Some(r) = result.next().await? {
-        let mut c: RDBChangeAlt = de::from_row(&r)?;
-        c.clean_descriptions();
+        let c = de::from_row(&r)?;
         changes.push(c);
     }
 

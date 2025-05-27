@@ -1,12 +1,13 @@
 use std::{collections::HashMap, fmt::Display, hash::Hash};
 
 use actix_web::web;
-use itertools::Itertools;
 use libsql::Database;
 use log::info;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_with::with_prefix;
 use time::{OffsetDateTime, format_description};
+
+use crate::utils::clean_description;
 
 pub const LOGGED_IN_COOKIE: &str = "logged_in";
 
@@ -305,63 +306,12 @@ impl RDBChangeAlt {
         }
     }
 
-    pub fn clean_description(mut s: String) -> String {
-        s = s.replace("<span data-preserve-white-space></span>", "\n");
-        s = s.replace("<p>", "\n");
-        s = s.replace("</p>", "");
-        s = s.replace("\\(", "(");
-        s = s.replace("\\)", ")");
-        s = s.replace("\\/", "/");
-        s = s.replace("\\+", "+");
-        s = s.replace("**", "");
-
-        // Remove . that isn't \.
-        info!("Started cleaning .");
-        loop {
-            let Some(index) = s
-                .chars()
-                .tuple_windows()
-                .enumerate()
-                .find_map(|(index, (one, us))| (one == ' ' && us == '.').then_some(index))
-            else {
-                break;
-            };
-            s.replace_range(index..(index + 2), "\n\t.");
-        }
-
-        // Remove - that isn't \-
-        info!("Started cleaning -");
-        loop {
-            let Some(index) = s
-                .chars()
-                .tuple_windows()
-                .enumerate()
-                .find_map(|(index, (one, us))| (one == ' ' && us == '-').then_some(index))
-            else {
-                break;
-            };
-            s.replace_range(index..(index + 2), "\n\t-");
-        }
-
-        info!("Started cleaning rest");
-        // unescape
-        s = s.replace("\\.", ".");
-        s = s.replace("\\-", "-");
-
-        s
-    }
-
     pub fn clean_descriptions(&mut self) {
         info!("Started cleaning current");
-        self.current_card_description = self
-            .current_card_description
-            .take()
-            .map(RDBChangeAlt::clean_description);
+        self.current_card_description = self.current_card_description.take().map(clean_description);
         info!("Started cleaning previous");
-        self.previous_card_description = self
-            .previous_card_description
-            .take()
-            .map(RDBChangeAlt::clean_description);
+        self.previous_card_description =
+            self.previous_card_description.take().map(clean_description);
     }
 }
 

@@ -9,9 +9,17 @@ use crate::{
     db::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TAB_ASSIGNS_T, R_TABS_T},
     queries::roadmap::{get_most_recent_roadmap, get_watched_tabs},
     types::{AppData, RCard, RChange, RTab, Roadmap, StringError, WebRoadmap},
+    utils::clean_description,
 };
 
 pub async fn get_roadmap_json() -> anyhow::Result<String> {
+    if false {
+        return Ok(include_str!("../../tmp/red_modified.json").into());
+    }
+    if false {
+        return Ok(include_str!("../../tmp/blue_modified.json").into());
+    }
+
     let client = reqwest::Client::new();
 
     let res = client
@@ -77,6 +85,7 @@ fn web_to_saved_roadmap(mut roadmap: WebRoadmap, watched_ids: &[String]) -> Road
                 .binary_search_by_key(&ass.portal_card_id, |c| c.id.clone())
                 .expect("Card exists");
             let mut card = roadmap.portal_cards[card_index].clone();
+            card.description = clean_description(card.description);
             card.section_position = Some(section_pos);
             card.card_position = Some(ass.position);
             card.assign_db_id = None;

@@ -1,4 +1,5 @@
 use actix_web::{HttpRequest, HttpResponse, cookie::Cookie};
+use itertools::Itertools;
 use libsql::Connection;
 use log::{error, info};
 use time::OffsetDateTime;
@@ -67,4 +68,47 @@ pub async fn is_logged_in(req: &HttpRequest, db: Connection) -> bool {
             }
         }
     }
+}
+
+pub fn clean_description(mut s: String) -> String {
+    s = s.replace("<span data-preserve-white-space></span>", "\n");
+    s = s.replace("<p>", "\n");
+    s = s.replace("</p>", "");
+    s = s.replace("\\(", "(");
+    s = s.replace("\\)", ")");
+    s = s.replace("\\/", "/");
+    s = s.replace("\\+", "+");
+    s = s.replace("**", "");
+
+    // Remove . that isn't \.
+    loop {
+        let Some(index) = s
+            .chars()
+            .tuple_windows()
+            .enumerate()
+            .find_map(|(index, (one, us))| (one == ' ' && us == '.').then_some(index))
+        else {
+            break;
+        };
+        s.replace_range(index..(index + 2), "\n\t.");
+    }
+
+    // Remove - that isn't \-
+    loop {
+        let Some(index) = s
+            .chars()
+            .tuple_windows()
+            .enumerate()
+            .find_map(|(index, (one, us))| (one == ' ' && us == '-').then_some(index))
+        else {
+            break;
+        };
+        s.replace_range(index..(index + 2), "\n\t-");
+    }
+
+    // unescape
+    s = s.replace("\\.", ".");
+    s = s.replace("\\-", "-");
+
+    s
 }

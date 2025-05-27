@@ -210,15 +210,54 @@ function Roadmaps() {
 	const queryClient = useQueryClient();
 	const roadmapActivity = useQuery<TRoadmapActivity[]>({
 		queryKey: ["roadmap_activity"],
-		queryFn: () => fetch("/api/roadmap_activity").then((res) => res.json()),
+		queryFn: () => fetch("/api/roadmap_activity").then(async (res) => {
+			if (res.ok) {
+				return res.json();
+			} else {
+				let err;
+				try {
+					err = await res.json();
+				} catch {
+					err = "Non-json return from response";
+				}
+				console.log("Error fetching roadmap activity", err);
+				throw err;
+			}
+		}),
 	});
 	const mostRecentTabs = useQuery<TRTab[]>({
 		queryKey: ["most_recent_tabs"],
-		queryFn: () => fetch("/api/most_recent_tabs").then((res) => res.json()),
+		queryFn: () => fetch("/api/most_recent_tabs").then(async (res) => {
+			if (res.ok) {
+				return res.json();
+			} else {
+				let err;
+				try {
+					err = await res.json();
+				} catch {
+					err = "Non-json return from response";
+				}
+				console.log("Error fetching most recent tabs", err);
+				throw err;
+			}
+		}),
 	});
 	const roadmapWatchedTabs = useQuery<TWatchedTab[]>({
 		queryKey: ["watched_tabs"],
-		queryFn: () => fetch("/api/watched_tabs").then((res) => res.json()),
+		queryFn: () => fetch("/api/watched_tabs").then(async (res) => {
+			if (res.ok) {
+				return res.json();
+			} else {
+				let err;
+				try {
+					err = await res.json();
+				} catch {
+					err = "Non-json return from response";
+				}
+				console.log("Error fetching watched tabs", err);
+				throw err;
+			}
+		}),
 	});
 
 	const roadmapTable = useReactTable({
@@ -276,101 +315,125 @@ function Roadmaps() {
 
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Watched Tabs</h3>
-				<TableGrid>
-					<Fragment>
-						{watchedTabsTable.getHeaderGroups().map((headerGroup) => (
-							<Fragment key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<div key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					<Fragment>
-						{watchedTabsTable.getRowModel().rows.map((row) => (
-							<Fragment key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<div key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-				</TableGrid>
+				{roadmapWatchedTabs.isError ?
+					<p>There's been an error fetching watched tabs</p>
+				: roadmapWatchedTabs.isPending ?
+					<p>Fetching watched tabs...</p>
+				: roadmapWatchedTabs.data.length === 0 ?
+					<p>There are no saved watched tabs</p>
+				: (
+					<TableGrid>
+						<Fragment>
+							{watchedTabsTable.getHeaderGroups().map((headerGroup) => (
+								<Fragment key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<div key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+						<Fragment>
+							{watchedTabsTable.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<div key={cell.id}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+					</TableGrid>
+				)}
 			</div>
 
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Most Recent Tabs</h3>
-				<TableGrid>
-					<Fragment>
-						{tabsTable.getHeaderGroups().map((headerGroup) => (
-							<Fragment key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<div key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					<Fragment>
-						{tabsTable.getRowModel().rows.map((row) => (
-							<Fragment key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<div key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-				</TableGrid>
+				{mostRecentTabs.isError ?
+					<p>There's been an error fetching most recent tabs</p>
+				: mostRecentTabs.isPending ?
+					<p>Fetching most recent tabs...</p>
+				: mostRecentTabs.data.length == 0 ?
+					<p>There are no saved most recent tabs</p>
+				: (
+					<TableGrid>
+						<Fragment>
+							{tabsTable.getHeaderGroups().map((headerGroup) => (
+								<Fragment key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<div key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+						<Fragment>
+							{tabsTable.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<div key={cell.id}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+					</TableGrid>
+				)}
 			</div>
 
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Roadmap Activity</h3>
-				<TableGrid className={style.template_2}>
-					<Fragment>
-						{roadmapTable.getHeaderGroups().map((headerGroup) => (
-							<Fragment key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<div key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					<Fragment>
-						{roadmapTable.getRowModel().rows.map((row) => (
-							<Fragment key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<div key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-				</TableGrid>
+				{roadmapActivity.isError ?
+					<p>There's been an error fetching roadmap activity</p>
+				: roadmapActivity.isPending ?
+					<p>Fetching roadmap activity...</p>
+				: roadmapActivity.data.length === 0 ?
+					<p>There are no saved roadmap activity</p>
+				: (
+					<TableGrid className={style.template_2}>
+						<Fragment>
+							{roadmapTable.getHeaderGroups().map((headerGroup) => (
+								<Fragment key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<div key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+						<Fragment>
+							{roadmapTable.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<div key={cell.id}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+					</TableGrid>
+				)}
 			</div>
 		</>
 	);

@@ -59,7 +59,20 @@ function Activity() {
 	const queryClient = useQueryClient();
 	const activity = useQuery<TActivity[]>({
 		queryKey: ["activity"],
-		queryFn: () => fetch("/api/activity").then((res) => res.json()),
+		queryFn: () => fetch("/api/activity").then(async (res) => {
+			if (res.ok) {
+				return res.json();
+			} else {
+				let err;
+				try {
+					err = await res.json();
+				} catch {
+					err = "Non-json return from response";
+				}
+				console.log("Error fetching activities", err);
+				throw err;
+			}
+		}),
 	});
 
 	const table = useReactTable({
@@ -149,51 +162,43 @@ function Activity() {
 			</div>
 			<div className="max-w-4xl mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Activity</h3>
-				<TableGrid>
-					<Fragment>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<Fragment key={headerGroup.id}>
-								{headerGroup.headers.map((header) => (
-									<div key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					<Fragment>
-						{table.getRowModel().rows.map((row) => (
-							<Fragment key={row.id}>
-								{row.getVisibleCells().map((cell) => (
-									<div key={cell.id}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</div>
-								))}
-							</Fragment>
-						))}
-					</Fragment>
-					{/* <tfoot>
-						{table.getFooterGroups().map((footerGroup) => (
-							<tr key={footerGroup.id}>
-								{footerGroup.headers.map((header) => (
-									<th key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.footer,
-													header.getContext()
-												)}
-									</th>
-								))}
-							</tr>
-						))}
-					</tfoot> */}
-				</TableGrid>
+				{activity.isError ?
+					<p>There's been an error fetching activity</p>
+				: activity.isPending ?
+					<p>Fetching activity...</p>
+				: activity.data.length == 0 ?
+					<p>There are no saved activity</p>
+				: (
+					<TableGrid>
+						<Fragment>
+							{table.getHeaderGroups().map((headerGroup) => (
+								<Fragment key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<div key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+						<Fragment>
+							{table.getRowModel().rows.map((row) => (
+								<Fragment key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<div key={cell.id}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</div>
+									))}
+								</Fragment>
+							))}
+						</Fragment>
+					</TableGrid>
+				)}
 			</div>
 		</>
 	);
