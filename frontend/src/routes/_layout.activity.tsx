@@ -167,7 +167,7 @@ function Activity() {
 				: activity.isPending ?
 					<p>Fetching activity...</p>
 				: activity.data.length == 0 ?
-					<p>There are no saved activity</p>
+					<p>There is no saved activity</p>
 				: (
 					<TableGrid>
 						<Fragment>

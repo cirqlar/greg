@@ -402,7 +402,7 @@ function Roadmaps() {
 				: roadmapActivity.isPending ?
 					<p>Fetching roadmap activity...</p>
 				: roadmapActivity.data.length === 0 ?
-					<p>There are no saved roadmap activity</p>
+					<p>There is no saved roadmap activity</p>
 				: (
 					<TableGrid className={style.template_2}>
 						<Fragment>

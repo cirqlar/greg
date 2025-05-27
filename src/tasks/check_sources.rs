@@ -148,7 +148,6 @@ pub async fn check_sources(data: &AppData) {
                             most_recent = Some(pub_time);
                         }
 
-                        // let r_client = thisclient.clone();
                         #[cfg(feature = "mail")]
                         let r_channel_title = channel_title.clone();
                         requests.spawn(async move {
@@ -234,6 +233,8 @@ pub async fn check_sources(data: &AppData) {
                     }
                 });
             }
+
+            drop(act_send);
 
             let mut count = 0;
             let mut failed = Vec::new();
