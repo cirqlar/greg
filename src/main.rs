@@ -41,17 +41,14 @@ async fn main() -> anyhow::Result<()> {
 
     let app_data = web::Data::new(AppState { db });
 
-    // check_roadmap(&app_data).await;
-    // return Ok(());
-
     #[cfg(feature = "scheduler")]
     {
+        let scheduler = JobScheduler::new().await?;
+
         // Sources
         let tmp_data = app_data.clone();
-
-        let scheduler = JobScheduler::new().await?;
         scheduler
-            .add(Job::new_async("0 0 */3 * * *", move |_uuid, _l| {
+            .add(Job::new_async("every 3 hours", move |_uuid, _l| {
                 let sched_data = web::Data::clone(&tmp_data);
                 Box::pin(async move {
                     let our_data = web::Data::clone(&sched_data);
@@ -59,16 +56,12 @@ async fn main() -> anyhow::Result<()> {
                 })
             })?)
             .await?;
-        info!("Initialized Sources Scheduler");
-        scheduler.start().await?;
-        info!("Sources Scheduler Started");
+        info!("Added Sources Schedule");
 
         // Roadmap
         let tmp_data = app_data.clone();
-
-        let scheduler = JobScheduler::new().await?;
         scheduler
-            .add(Job::new_async("0 0 4 * * *", move |_uuid, _l| {
+            .add(Job::new_async("every day at 4:00 pm", move |_uuid, _l| {
                 let sched_data = web::Data::clone(&tmp_data);
                 Box::pin(async move {
                     let our_data = web::Data::clone(&sched_data);
@@ -76,9 +69,10 @@ async fn main() -> anyhow::Result<()> {
                 })
             })?)
             .await?;
-        info!("Initialized Roadmap Scheduler");
+        info!("Added Roadmap Schedule");
+
         scheduler.start().await?;
-        info!("Roadmap Scheduler Started");
+        info!("Scheduler Started");
     }
 
     HttpServer::new(move || {

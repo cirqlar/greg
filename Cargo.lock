@@ -963,6 +963,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "english-to-cron"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a13a7d5e0ab3872c3ee478366eae624d89ab953d30276b0eee08169774ceb73"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "env_filter"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3123,6 +3132,7 @@ checksum = "5c71ce8f810abc9fabebccc30302a952f9e89c6cf246fafaf170fef164063141"
 dependencies = [
  "chrono",
  "croner",
+ "english-to-cron",
  "num-derive",
  "num-traits",
  "tokio",
