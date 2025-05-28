@@ -8,6 +8,7 @@ export default defineConfig({
   appType: 'spa',
   build: {
     outDir: '../dist',
+    emptyOutDir: true,
   },
   server: {
     proxy: {
