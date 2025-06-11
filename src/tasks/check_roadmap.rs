@@ -1,9 +1,8 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env};
 
-use libsql::Connection;
+use libsql::Transaction;
 use log::{error, info, warn};
 use time::OffsetDateTime;
-use tokio::task::JoinSet;
 
 use crate::{
     db::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TAB_ASSIGNS_T, R_TABS_T},
@@ -11,6 +10,9 @@ use crate::{
     types::{AppData, RCard, RChange, RTab, Roadmap, StringError, WebRoadmap},
     utils::clean_description,
 };
+
+const JSON_START_LANDMARK: &str = "window.pbData";
+const JSON_END_LANDMARK: &str = "</script>";
 
 pub async fn get_roadmap_json() -> anyhow::Result<String> {
     let client = reqwest::Client::new();
@@ -25,20 +27,22 @@ pub async fn get_roadmap_json() -> anyhow::Result<String> {
     }
 
     let mut content = res.text().await?;
-    let Some(pb_start) = content.find("window.pbData") else {
+    let Some(json_search_start) = content.find(JSON_START_LANDMARK) else {
         return Err(StringError("Didn't find pbData substring".into()).into());
     };
-    let Some(open_bracket) = content[pb_start..].find('{') else {
+    let Some(json_start) = content[json_search_start..].find('{') else {
         return Err(StringError("Didn't find open bracket".into()).into());
     };
-    let Some(end_script) = content[pb_start..].find("</script>") else {
+    let Some(json_search_end) = content[json_search_start..].find(JSON_END_LANDMARK) else {
         return Err(StringError("Didn't find </script>".into()).into());
     };
-    let Some(close_bracket) = content[pb_start..=pb_start + end_script].rfind('}') else {
+    let Some(json_end) =
+        content[json_search_start..=json_search_start + json_search_end].rfind('}')
+    else {
         return Err(StringError("Didn't find close_bracket".into()).into());
     };
 
-    content = content[pb_start + open_bracket..=pb_start + close_bracket].to_owned();
+    content = content[json_search_start + json_start..=json_search_start + json_end].to_owned();
     Ok(content)
 }
 
@@ -93,19 +97,14 @@ fn web_to_saved_roadmap(mut roadmap: WebRoadmap, watched_ids: &[String]) -> Road
     url_saved_roadmap
 }
 
-fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>, bool, bool) {
-    info!("Started comparison");
+fn compare_roadmaps(previous: &Roadmap, current: &Roadmap) -> Vec<RChange> {
+    info!("Started roadmap comparison");
 
     let mut all_changes: Vec<RChange> = Vec::new();
-    let mut should_notify = false;
-    let mut should_save = false;
 
     // Check tabs for changes
     for (index, tab) in previous.tabs.iter().enumerate() {
         if !current.tabs.iter().any(|t| t.id == tab.id) {
-            should_notify = true;
-            should_save = true;
-
             all_changes.push(RChange::TabRemoved {
                 tab_index: index.try_into().unwrap(),
             });
@@ -117,9 +116,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
     }
     for (index, tab) in current.tabs.iter().enumerate() {
         if !previous.tabs.iter().any(|t| t.id == tab.id) {
-            should_notify = true;
-            should_save = true;
-
             all_changes.push(RChange::TabAdded {
                 tab_index: index.try_into().unwrap(),
             });
@@ -138,7 +134,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
                 .find_map(|(index, t)| (t.id == *k).then_some(index))
                 .unwrap();
 
-            should_save = true;
             all_changes.push(RChange::TabCardsNotInCurrent {
                 tab_index: tab_index.try_into().unwrap(),
             });
@@ -157,8 +152,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
                 let image = card.image_url != _current.image_url;
 
                 if title || description || image {
-                    should_notify = true;
-                    should_save = true;
                     all_changes.push(RChange::CardModified {
                         tab_id: k.clone(),
                         previous_card_index: index.try_into().unwrap(),
@@ -171,8 +164,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
                     });
                 }
             } else {
-                should_notify = true;
-                should_save = true;
                 all_changes.push(RChange::CardRemoved {
                     tab_id: k.clone(),
                     card_index: index.try_into().unwrap(),
@@ -193,7 +184,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
                 .find_map(|(index, t)| (t.id == *k).then_some(index))
                 .unwrap();
 
-            should_save = true;
             all_changes.push(RChange::TabCardsNotInPrevious {
                 tab_index: tab_index.try_into().unwrap(),
             });
@@ -206,8 +196,6 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
                 .binary_search_by(|other_card| other_card.id.cmp(&card.id))
                 .is_err()
             {
-                should_notify = true;
-                should_save = true;
                 all_changes.push(RChange::CardAdded {
                     tab_id: k.clone(),
                     card_index: (index).try_into().unwrap(),
@@ -219,10 +207,11 @@ fn compare_roadmaps_sync(previous: &Roadmap, current: &Roadmap) -> (Vec<RChange>
     info!("Finished current comparisons");
 
     info!("Finished comparisons");
-    (all_changes, should_notify, should_save)
+
+    all_changes
 }
 
-async fn save_card(db: Connection, card: &RCard) -> anyhow::Result<u32> {
+async fn save_card_tx(db: &Transaction, card: &RCard) -> anyhow::Result<u32> {
     let mut result = db
         .query(
             &format!(
@@ -249,7 +238,7 @@ async fn save_card(db: Connection, card: &RCard) -> anyhow::Result<u32> {
     Ok(r.get(0)?)
 }
 
-async fn save_tab(db: Connection, tab: &RTab) -> anyhow::Result<u32> {
+async fn save_tab_tx(db: &Transaction, tab: &RTab) -> anyhow::Result<u32> {
     let mut result = db
         .query(
             &format!(
@@ -274,7 +263,7 @@ async fn save_tab(db: Connection, tab: &RTab) -> anyhow::Result<u32> {
     Ok(r.get(0)?)
 }
 
-async fn new_roadmap(db: Connection) -> anyhow::Result<u32> {
+async fn new_roadmap_tx(db: &Transaction) -> anyhow::Result<u32> {
     let mut result = db
         .query(
             &format!(
@@ -296,7 +285,11 @@ async fn new_roadmap(db: Connection) -> anyhow::Result<u32> {
 
 /// Save card assignment
 /// * `assign_ids` - activity, tab, card, section_pos, card_pos
-async fn save_card_assignment(db: Connection, assign_info: &[u32; 5]) -> anyhow::Result<()> {
+async fn save_card_assignment_tx(
+    db: &Transaction,
+    card_id: u32,
+    assign_info: &[u32; 4],
+) -> anyhow::Result<()> {
     let _result = db
         .execute(
             &format!(
@@ -309,9 +302,9 @@ async fn save_card_assignment(db: Connection, assign_info: &[u32; 5]) -> anyhow:
             (
                 assign_info[0],
                 assign_info[1],
+                card_id,
                 assign_info[2],
                 assign_info[3],
-                assign_info[4],
                 serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
             ),
         )
@@ -320,10 +313,20 @@ async fn save_card_assignment(db: Connection, assign_info: &[u32; 5]) -> anyhow:
     Ok(())
 }
 
+async fn save_card_and_assignment(
+    db: &Transaction,
+    card: &RCard,
+    assign_info: &[u32; 4],
+) -> anyhow::Result<u32> {
+    let card_id = save_card_tx(db, card).await?;
+    save_card_assignment_tx(db, card_id, assign_info).await?;
+    Ok(card_id)
+}
+
 /// Save tab assignment
 /// * `assign_ids` - activity, tab, card, section_pos, card_pos
-async fn save_tab_assignment(
-    db: Connection,
+async fn save_tab_assignment_tx(
+    db: &Transaction,
     activity_id: u32,
     tab_db_id: u32,
 ) -> anyhow::Result<()> {
@@ -347,10 +350,26 @@ async fn save_tab_assignment(
     Ok(())
 }
 
+async fn save_tab_and_assignment(
+    db: &Transaction,
+    tab: &RTab,
+    activity_id: u32,
+) -> anyhow::Result<u32> {
+    let tab_id = save_tab_tx(db, tab)
+        .await
+        .map_err(|e| StringError(format!("Failed to save tab {}", e)))?;
+
+    save_tab_assignment_tx(db, activity_id, tab_id)
+        .await
+        .map_err(|e| StringError(format!("Failed to save assignment {}", e)))?;
+
+    Ok(tab_id)
+}
+
 /// Save change
 /// * `change_info` - previous_card, current_card, tab
-async fn save_change(
-    db: Connection,
+async fn save_change_tx(
+    db: &Transaction,
     change_type: &str,
     activity: u32,
     change_info: &[Option<u32>; 3],
@@ -380,127 +399,36 @@ async fn save_change(
 
 const _MAX_GOING_REQUESTS: usize = 10;
 
-/// Faster but not by much (at ten)
-/// Hangs sometimes, not sure why
-/// So disabled for now
-async fn _save_all_cards(
-    db: Connection,
-    roadmap: Arc<Roadmap>,
-    roadmap_id: u32,
-    tab_ids: Arc<HashMap<String, u32>>,
-) {
-    info!("Saving all cards");
-
-    for k in roadmap.cards.keys() {
-        let card_count = roadmap.cards.get(k).unwrap().len();
-        let mut index_iter = 0..card_count;
-
-        let mut count = 0;
-        loop {
-            let mut set = JoinSet::new();
-            let mut finished = false;
-
-            while count < _MAX_GOING_REQUESTS && !finished {
-                if let Some(index) = index_iter.next() {
-                    let ndb = db.clone();
-                    let key = k.clone();
-                    let nroadmap = roadmap.clone();
-                    let ntab_ids = tab_ids.clone();
-
-                    set.spawn(async move {
-                        let c = &nroadmap.cards.get(&key).unwrap()[index];
-                        let card_result = save_card(ndb.clone(), c).await;
-                        let Ok(card_id) = card_result else {
-                            return Err(StringError(format!(
-                                "[Check Roadmap] Failed to save card to db err: {}",
-                                card_result.unwrap_err()
-                            )));
-                        };
-
-                        let assign_result = save_card_assignment(
-                            ndb.clone(),
-                            &[
-                                roadmap_id,
-                                *ntab_ids.get(&key).unwrap(),
-                                card_id,
-                                c.section_position.unwrap(),
-                                c.card_position.unwrap(),
-                            ],
-                        )
-                        .await;
-                        let Ok(_) = assign_result else {
-                            return Err(StringError(format!(
-                                "[Check Roadmap] Failed to save card assignment to db err: {}",
-                                assign_result.unwrap_err()
-                            )));
-                        };
-
-                        Ok(())
-                    });
-                } else {
-                    finished = true;
-                }
-
-                count += 1;
-            }
-
-            while let Some(Ok(r)) = set.join_next().await {
-                match r {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("{}", e.0);
-                    }
-                }
-            }
-
-            if finished {
-                break;
-            }
-        }
-    }
-
-    info!("Finished Saving Cards");
-}
-
-async fn save_all_cards_sync(
-    db: Connection,
+async fn save_all_cards_sync_tx(
+    db: &Transaction,
     roadmap: &Roadmap,
     roadmap_id: u32,
     tab_ids: &HashMap<String, u32>,
-) {
+) -> anyhow::Result<()> {
     info!("Saving all cards");
     for k in roadmap.cards.keys() {
         for card in roadmap.cards.get(k).unwrap() {
-            let card_result = save_card(db.clone(), card).await;
-            let Ok(card_id) = card_result else {
-                error!(
-                    "[Check Roadmap] Failed to save card to db err: {}",
-                    card_result.unwrap_err()
-                );
-                return;
-            };
-
-            let assign_result = save_card_assignment(
-                db.clone(),
+            let _ = save_card_and_assignment(
+                db,
+                card,
                 &[
                     roadmap_id,
                     *tab_ids.get(k).unwrap(),
-                    card_id,
                     card.section_position.unwrap(),
                     card.card_position.unwrap(),
                 ],
             )
-            .await;
-            let Ok(_) = assign_result else {
-                error!(
-                    "[Check Roadmap] Failed to save card assignment to db err: {}",
-                    assign_result.unwrap_err()
-                );
-                return;
-            };
+            .await?;
         }
     }
-    info!("Finished Saving Cards")
+    info!("Finished Saving Cards");
+    Ok(())
+}
+
+async fn rollback_tx(tx: Transaction) {
+    if let Err(e) = tx.rollback().await {
+        error!("[Check Roadmap] Failed to rollback {}", e);
+    };
 }
 
 pub async fn check_roadmap(data: &AppData) {
@@ -556,8 +484,24 @@ pub async fn check_roadmap(data: &AppData) {
     };
 
     if let Some(previous_roadmap) = previous_roadmap {
-        let (changes, _should_notify, should_save) =
-            compare_roadmaps_sync(&previous_roadmap, &roadmap);
+        let changes = compare_roadmaps(&previous_roadmap, &roadmap);
+        let should_notify = changes.iter().any(|c| {
+            matches!(
+                c,
+                RChange::CardAdded { .. }
+                    | RChange::CardModified { .. }
+                    | RChange::CardRemoved { .. }
+                    | RChange::TabAdded { .. }
+                    | RChange::TabRemoved { .. }
+            )
+        });
+        let should_save = should_notify
+            || changes.iter().any(|c| {
+                matches!(
+                    c,
+                    RChange::TabCardsNotInCurrent { .. } | RChange::TabCardsNotInPrevious { .. }
+                )
+            });
 
         if !should_save {
             info!("[Check Roadmap] No Changes to save detected.");
@@ -572,13 +516,28 @@ pub async fn check_roadmap(data: &AppData) {
         }
 
         // Save Roadmap
-        let db = data.db.connect().unwrap();
-        let roadmap_result = new_roadmap(db.clone()).await;
+        let db = data.db.connect();
+        let Ok(db) = db else {
+            error!("[Check Roadmap] DB failed to connect {}", db.unwrap_err());
+            return;
+        };
+
+        let tx = db.transaction().await;
+        let Ok(tx) = tx else {
+            error!(
+                "[Check Roadmap] Failed to create transaction {}",
+                tx.err().unwrap()
+            );
+            return;
+        };
+
+        let roadmap_result = new_roadmap_tx(&tx).await;
         let Ok(roadmap_id) = roadmap_result else {
             error!(
                 "[Check Roadmap] Failed to save roadmap to db err: {}",
                 roadmap_result.unwrap_err()
             );
+            rollback_tx(tx).await;
             return;
         };
 
@@ -610,28 +569,20 @@ pub async fn check_roadmap(data: &AppData) {
                     let tab = &roadmap.tabs[*tab_index as usize];
 
                     // Add tab
-                    let tab_result = save_tab(db.clone(), tab).await;
+                    let tab_result = save_tab_and_assignment(&tx, tab, roadmap_id).await;
                     let Ok(tab_id) = tab_result else {
                         error!(
                             "[Check Roadmap] Failed to save tab to db err: {}",
                             tab_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
 
                     tab_ids.insert(tab.id.clone(), tab_id);
 
-                    let assign_result = save_tab_assignment(db.clone(), roadmap_id, tab_id).await;
-                    let Ok(_) = assign_result else {
-                        error!(
-                            "[Check Roadmap] Failed to save tab assignment to db err: {}",
-                            assign_result.unwrap_err()
-                        );
-                        return;
-                    };
-
-                    let change_result = save_change(
-                        db.clone(),
+                    let change_result = save_change_tx(
+                        &tx,
                         "tab_added",
                         roadmap_id,
                         &[Option::<u32>::None, Option::<u32>::None, Some(tab_id)],
@@ -642,13 +593,14 @@ pub async fn check_roadmap(data: &AppData) {
                             "[Check Roadmap] Failed to save tab change to db err: {}",
                             change_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
                 }
                 RChange::TabRemoved { tab_index } => {
                     let tab_id = previous_roadmap.tabs[*tab_index as usize].db_id.unwrap();
-                    let change_result = save_change(
-                        db.clone(),
+                    let change_result = save_change_tx(
+                        &tx,
                         "tab_removed",
                         roadmap_id,
                         &[Option::<u32>::None, Option::<u32>::None, Some(tab_id)],
@@ -659,18 +611,20 @@ pub async fn check_roadmap(data: &AppData) {
                             "[Save Change] unable to save tab change. err: {}",
                             change_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
                 }
                 RChange::TabUnchanged { tab_index } => {
                     let tab_id = previous_roadmap.tabs[*tab_index as usize].db_id.unwrap();
 
-                    let assign_result = save_tab_assignment(db.clone(), roadmap_id, tab_id).await;
+                    let assign_result = save_tab_assignment_tx(&tx, roadmap_id, tab_id).await;
                     let Ok(_) = assign_result else {
                         error!(
                             "[Check Roadmap] Failed to save tab assignment to db err: {}",
                             assign_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
                 }
@@ -689,12 +643,12 @@ pub async fn check_roadmap(data: &AppData) {
                 RChange::CardUnchanged { tab_id, card_index } => {
                     let card = &previous_roadmap.cards.get(tab_id).unwrap()[*card_index as usize];
 
-                    let assign_result = save_card_assignment(
-                        db.clone(),
+                    let assign_result = save_card_assignment_tx(
+                        &tx,
+                        card.db_id.unwrap(),
                         &[
                             roadmap_id,
                             *tab_ids.get(tab_id).unwrap(),
-                            card.db_id.unwrap(),
                             card.section_position.unwrap(),
                             card.card_position.unwrap(),
                         ],
@@ -705,6 +659,7 @@ pub async fn check_roadmap(data: &AppData) {
                             "[Check Roadmap] Failed to save card assignment to db err: {}",
                             assign_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
                 }
@@ -712,31 +667,23 @@ pub async fn check_roadmap(data: &AppData) {
                     change_type = "card_added";
                     let card = &roadmap.cards.get(tab_id).unwrap()[*card_index as usize];
 
-                    let card_result = save_card(db.clone(), card).await;
-                    let Ok(card_id) = card_result else {
-                        error!(
-                            "[Check Roadmap] Failed to save card to db err: {}",
-                            card_result.unwrap_err()
-                        );
-                        return;
-                    };
-
-                    let assign_result = save_card_assignment(
-                        db.clone(),
+                    let card_result = save_card_and_assignment(
+                        &tx,
+                        card,
                         &[
                             roadmap_id,
                             *tab_ids.get(tab_id).unwrap(),
-                            card_id,
                             card.section_position.unwrap(),
                             card.card_position.unwrap(),
                         ],
                     )
                     .await;
-                    let Ok(_) = assign_result else {
+                    let Ok(card_id) = card_result else {
                         error!(
-                            "[Check Roadmap] Failed to save card assignment to db err: {}",
-                            assign_result.unwrap_err()
+                            "[Check Roadmap] Failed to save card to db err: {}",
+                            card_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
 
@@ -758,38 +705,32 @@ pub async fn check_roadmap(data: &AppData) {
                     previous_card_id = Some(card.db_id.unwrap());
 
                     let card = &roadmap.cards.get(tab_id).unwrap()[*current_card_index as usize];
-                    let card_result = save_card(db.clone(), card).await;
-                    let Ok(card_id) = card_result else {
-                        error!(
-                            "[Check Roadmap] Failed to save card to db err: {}",
-                            card_result.unwrap_err()
-                        );
-                        return;
-                    };
-                    let assign_result = save_card_assignment(
-                        db.clone(),
+                    let card_result = save_card_and_assignment(
+                        &tx,
+                        card,
                         &[
                             roadmap_id,
                             *tab_ids.get(tab_id).unwrap(),
-                            card_id,
                             card.section_position.unwrap(),
                             card.card_position.unwrap(),
                         ],
                     )
                     .await;
-                    let Ok(_) = assign_result else {
+                    let Ok(card_id) = card_result else {
                         error!(
-                            "[Check Roadmap] Failed to save card assignment to db err: {}",
-                            assign_result.unwrap_err()
+                            "[Check Roadmap] Failed to save card to db err: {}",
+                            card_result.unwrap_err()
                         );
+                        rollback_tx(tx).await;
                         return;
                     };
+
                     current_card_id = Some(card_id);
                 }
                 RChange::TabAdded { .. }
                 | RChange::TabRemoved { .. }
                 | RChange::TabUnchanged { .. } => {
-                    error!("[Check Roadmap] Found non tab change in tab changelist");
+                    error!("[Check Roadmap] Found non tab change in card changelist");
                     continue;
                 }
                 RChange::TabCardsNotInCurrent { .. } => {
@@ -797,15 +738,22 @@ pub async fn check_roadmap(data: &AppData) {
                 }
                 RChange::TabCardsNotInPrevious { .. } => {
                     // Save all cards
-                    save_all_cards_sync(db.clone(), &roadmap, roadmap_id, &tab_ids).await;
+                    if let Err(e) =
+                        save_all_cards_sync_tx(&tx, &roadmap, roadmap_id, &tab_ids).await
+                    {
+                        error!("[Check Roadmap] Failed to save cards. err: {}", e);
+                        rollback_tx(tx).await;
+                        return;
+                    };
+
                     continue;
                 }
             };
 
             // Save change
             if previous_card_id.is_some() || current_card_id.is_some() {
-                let change_result = save_change(
-                    db.clone(),
+                let change_result = save_change_tx(
+                    &tx,
                     change_type,
                     roadmap_id,
                     &[previous_card_id, current_card_id, Option::<u32>::None],
@@ -816,10 +764,17 @@ pub async fn check_roadmap(data: &AppData) {
                         "[Save Change] unable to save card change. err: {}",
                         change_result.unwrap_err()
                     );
+                    rollback_tx(tx).await;
                     return;
                 };
             }
         }
+
+        // Finish
+        if let Err(e) = tx.commit().await {
+            error!("[Check Roadmap] Failed to commit {}", e);
+            return;
+        };
 
         #[cfg(feature = "mail")]
         if _should_notify {
@@ -868,81 +823,56 @@ pub async fn check_roadmap(data: &AppData) {
             }
         }
     } else {
-        let db = data.db.connect().unwrap();
+        let db = data.db.connect();
+        let Ok(db) = db else {
+            error!("[Check Roadmap] DB failed to connect {}", db.unwrap_err());
+            return;
+        };
+
+        let tx = db.transaction().await;
+        let Ok(tx) = tx else {
+            error!(
+                "[Check Roadmap] Failed to create transaction {}",
+                tx.err().unwrap()
+            );
+            return;
+        };
 
         // save roadmap
-        let roadmap_result = new_roadmap(db.clone()).await;
+        let roadmap_result = new_roadmap_tx(&tx).await;
         let Ok(roadmap_id) = roadmap_result else {
             error!(
                 "[Check Roadmap] Failed to save roadmap to db err: {}",
                 roadmap_result.unwrap_err()
             );
+            rollback_tx(tx).await;
             return;
         };
 
         let mut tab_ids: HashMap<String, u32> = HashMap::new();
 
         for tab in roadmap.tabs.iter() {
-            let tab_result = save_tab(db.clone(), tab).await;
+            let tab_result = save_tab_and_assignment(&tx, tab, roadmap_id).await;
             let Ok(tab_id) = tab_result else {
                 error!(
                     "[Check Roadmap] Failed to save tab to db err: {}",
                     tab_result.unwrap_err()
                 );
+                rollback_tx(tx).await;
                 return;
             };
 
             tab_ids.insert(tab.id.clone(), tab_id);
-
-            let assign_result = save_tab_assignment(db.clone(), roadmap_id, tab_id).await;
-            let Ok(_) = assign_result else {
-                error!(
-                    "[Check Roadmap] Failed to save tab assignment to db err: {}",
-                    assign_result.unwrap_err()
-                );
-                return;
-            };
         }
 
-        save_all_cards_sync(db.clone(), &roadmap, roadmap_id, &tab_ids).await;
-
-        // let roadmap = Arc::new(roadmap);
-        // let tab_ids = Arc::new(tab_ids);
-
-        // save_all_cards(db.clone(), roadmap, roadmap_id, tab_ids).await;
-        // info!("Saving all cards");
-        // for k in roadmap.cards.keys() {
-        //     for card in roadmap.cards.get(k).unwrap() {
-        //         let card_result = save_card(db.clone(), card).await;
-        //         let Ok(card_id) = card_result else {
-        //             error!(
-        //                 "[Check Roadmap] Failed to save card to db err: {}",
-        //                 card_result.unwrap_err()
-        //             );
-        //             return;
-        //         };
-
-        //         let assign_result = save_card_assignment(
-        //             db.clone(),
-        //             &[
-        //                 roadmap_id,
-        //                 *tab_ids.get(k).unwrap(),
-        //                 card_id,
-        //                 card.section_position.unwrap(),
-        //                 card.card_position.unwrap(),
-        //             ],
-        //         )
-        //         .await;
-        //         let Ok(_) = assign_result else {
-        //             error!(
-        //                 "[Check Roadmap] Failed to save card assignment to db err: {}",
-        //                 assign_result.unwrap_err()
-        //             );
-        //             return;
-        //         };
-        //     }
-        // }
-        // info!("Finished Saving Cards")
+        if let Err(e) = save_all_cards_sync_tx(&tx, &roadmap, roadmap_id, &tab_ids).await {
+            error!("[Check Roadmap] Failed to save cards. err: {}", e);
+            rollback_tx(tx).await;
+            return;
+        };
+        if let Err(e) = tx.commit().await {
+            error!("[Check Roadmap] Failed to commit {}", e);
+        };
     }
 
     let now = OffsetDateTime::now_utc();
