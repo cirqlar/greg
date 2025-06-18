@@ -777,7 +777,7 @@ pub async fn check_roadmap(data: &AppData) {
         };
 
         #[cfg(feature = "mail")]
-        if _should_notify {
+        if should_notify {
             // send email that there are changes
             let count = changes
                 .iter()
