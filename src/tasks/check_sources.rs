@@ -1,3 +1,5 @@
+use std::env;
+
 use feed_rs::parser;
 use libsql::Connection;
 use log::{error, info, warn};
@@ -267,7 +269,13 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
             new_failed_count,
             reason,
         } => {
-            let new_enabled: u32 = if new_failed_count >= 10 { 0 } else { 1 };
+            let new_enabled: u32 = if new_failed_count
+                >= env::var("SOURCE_DISABLE_AFTER").map_or(10, |v| v.parse().unwrap_or(10))
+            {
+                0
+            } else {
+                1
+            };
 
             let res = conn
                 .execute(
