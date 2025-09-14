@@ -14,7 +14,7 @@ use greg::{
             check_logged_in, get_activity, get_changes, get_most_recent_tabs, get_roadmap_activity,
             get_sources, get_watched_tabs, keep_alive,
         },
-        posts::{add_source, add_watched_tab, login, recheck, recheck_roadmap},
+        posts::{add_source, add_watched_tab, enable_source, login, recheck, recheck_roadmap},
     },
     types::AppState,
 };
@@ -98,7 +98,8 @@ async fn main() -> anyhow::Result<()> {
                     .service(recheck_roadmap)
                     .service(add_watched_tab)
                     .service(delete_watched_tab)
-                    .service(get_changes),
+                    .service(get_changes)
+                    .service(enable_source),
             )
             .service(
                 spa()

@@ -6,7 +6,7 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import TableGrid from "../components/table-grid";
 
 import style from "../components/table-grid.module.css";
@@ -33,8 +33,8 @@ type TRTab = {
 };
 
 const roadmapColumnHelper = createColumnHelper<TRoadmapActivity>();
-const watchedTabColumnHelper = createColumnHelper<TWatchedTab>();
-const tabColumnHelper = createColumnHelper<TRTab>();
+// const watchedTabColumnHelper = createColumnHelper<TWatchedTab>();
+// const tabColumnHelper = createColumnHelper<TRTab>();
 
 const roadmapColumns = [
 	roadmapColumnHelper.accessor("id", {
@@ -61,148 +61,148 @@ const roadmapColumns = [
 	}),
 ];
 
-function useWatchedTabsTable(roadmapWatchedTabs: TWatchedTab[]| undefined, mostRecentTabs: TRTab[]| undefined) {
-	const queryClient = useQueryClient();
-	const [loading, setLoading] = useState(false);
+// function useWatchedTabsTable(roadmapWatchedTabs: TWatchedTab[]| undefined, mostRecentTabs: TRTab[]| undefined) {
+// 	const queryClient = useQueryClient();
+// 	const [loading, setLoading] = useState(false);
 
-	const deleteWatchedTab = useMutation({
-		mutationFn: (id: number) =>
-			fetch(`/api/watched_tabs/${id}`, {
-				method: "DELETE",
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
-		},
-	});
+// 	const deleteWatchedTab = useMutation({
+// 		mutationFn: (id: number) =>
+// 			fetch(`/api/watched_tabs/${id}`, {
+// 				method: "DELETE",
+// 			}).then((res) => res.json()),
+// 		onSuccess: () => {
+// 			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+// 		},
+// 	});
 
-	const watchedTabColumns = useMemo(
-		() => [
-			watchedTabColumnHelper.accessor("id", {
-				cell: (info) => info.getValue(),
-				header: "ID",
-			}),
-			watchedTabColumnHelper.accessor("tab_id", {
-				cell: (info) => {
-					const tab_id = info.getValue();
-					const tab_name =
-						(mostRecentTabs ?? []).find((t) => t.id === tab_id)?.name ??
-						"Missing Tab";
+// 	const watchedTabColumns = useMemo(
+// 		() => [
+// 			watchedTabColumnHelper.accessor("id", {
+// 				cell: (info) => info.getValue(),
+// 				header: "ID",
+// 			}),
+// 			watchedTabColumnHelper.accessor("tab_id", {
+// 				cell: (info) => {
+// 					const tab_id = info.getValue();
+// 					const tab_name =
+// 						(mostRecentTabs ?? []).find((t) => t.id === tab_id)?.name ??
+// 						"Missing Tab";
 
-					return <span className="break-words">{tab_name}</span>;
-				},
-				header: "Tab Name",
-			}),
-			watchedTabColumnHelper.accessor("timestamp", {
-				cell: (info) => (
-					<span className="break-words">{formatDate(info.getValue())}</span>
-				),
-				header: "Added At",
-			}),
+// 					return <span className="break-words">{tab_name}</span>;
+// 				},
+// 				header: "Tab Name",
+// 			}),
+// 			watchedTabColumnHelper.accessor("timestamp", {
+// 				cell: (info) => (
+// 					<span className="break-words">{formatDate(info.getValue())}</span>
+// 				),
+// 				header: "Added At",
+// 			}),
 
-			watchedTabColumnHelper.display({
-				id: "removeTab",
-				cell: (props) => (
-					<button
-						disabled={loading}
-						className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
-						onClick={async (e) => {
-							e.preventDefault();
+// 			watchedTabColumnHelper.display({
+// 				id: "removeTab",
+// 				cell: (props) => (
+// 					<button
+// 						disabled={loading}
+// 						className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
+// 						onClick={async (e) => {
+// 							e.preventDefault();
 
-							setLoading(true);
-							try {
-								await deleteWatchedTab.mutateAsync(props.row.original.id)
-							} catch  {
-								console.log("Delete watched tab failed");
-							}
-							setLoading(false);
-						}}
-					>
-						Remove
-					</button>
-				),
-			}),
-		],
-		[deleteWatchedTab, loading, mostRecentTabs]
-	);
+// 							setLoading(true);
+// 							try {
+// 								await deleteWatchedTab.mutateAsync(props.row.original.id)
+// 							} catch  {
+// 								console.log("Delete watched tab failed");
+// 							}
+// 							setLoading(false);
+// 						}}
+// 					>
+// 						Remove
+// 					</button>
+// 				),
+// 			}),
+// 		],
+// 		[deleteWatchedTab, loading, mostRecentTabs]
+// 	);
 
-	const watchedTabsTable = useReactTable({
-		columns: watchedTabColumns,
-		data: roadmapWatchedTabs ?? [],
-		getCoreRowModel: getCoreRowModel(),
-	});
+// 	const watchedTabsTable = useReactTable({
+// 		columns: watchedTabColumns,
+// 		data: roadmapWatchedTabs ?? [],
+// 		getCoreRowModel: getCoreRowModel(),
+// 	});
 
-	return watchedTabsTable;
-}
+// 	return watchedTabsTable;
+// }
 
-function useMostRecentTabsTable(mostRecentTabs: TRTab[]| undefined, roadmapWatchedTabs: TWatchedTab[]| undefined) {
-	const queryClient = useQueryClient();
-	const [loading, setLoading] = useState(false);
+// function useMostRecentTabsTable(mostRecentTabs: TRTab[]| undefined, roadmapWatchedTabs: TWatchedTab[]| undefined) {
+// 	const queryClient = useQueryClient();
+// 	const [loading, setLoading] = useState(false);
 
-	const addWatchedTab = useMutation({
-		mutationFn: (tab_id: string) =>
-			fetch(`/api/watched_tabs/add/${tab_id}`, {
-				method: "POST",
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
-		},
-	});
+// 	const addWatchedTab = useMutation({
+// 		mutationFn: (tab_id: string) =>
+// 			fetch(`/api/watched_tabs/add/${tab_id}`, {
+// 				method: "POST",
+// 			}).then((res) => res.json()),
+// 		onSuccess: () => {
+// 			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+// 		},
+// 	});
 
-	const tabColumns = useMemo(
-		() => [
-			tabColumnHelper.accessor("id", {
-				cell: (info) => <span className="break-words">{info.getValue()}</span>,
-				header: "ID",
-			}),
-			tabColumnHelper.accessor("name", {
-				cell: (info) => <span className="break-words">{info.getValue()}</span>,
-				header: "Name",
-			}),
-			tabColumnHelper.accessor("slug", {
-				cell: (info) => <span className="break-words">{info.getValue()}</span>,
-				header: "Slug",
-			}),
-			tabColumnHelper.display({
-				id: "addToWatchedTabs",
-				cell: (props) => {
-					const isWatched = (roadmapWatchedTabs ?? []).some(
-						(t) => t.tab_id === props.row.original.id
-					);
+// 	const tabColumns = useMemo(
+// 		() => [
+// 			tabColumnHelper.accessor("id", {
+// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				header: "ID",
+// 			}),
+// 			tabColumnHelper.accessor("name", {
+// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				header: "Name",
+// 			}),
+// 			tabColumnHelper.accessor("slug", {
+// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				header: "Slug",
+// 			}),
+// 			tabColumnHelper.display({
+// 				id: "addToWatchedTabs",
+// 				cell: (props) => {
+// 					const isWatched = (roadmapWatchedTabs ?? []).some(
+// 						(t) => t.tab_id === props.row.original.id
+// 					);
 
-					return (
-						<button
-							disabled={isWatched || loading}
-							className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
-							onClick={async (e) => {
-								e.preventDefault();
+// 					return (
+// 						<button
+// 							disabled={isWatched || loading}
+// 							className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
+// 							onClick={async (e) => {
+// 								e.preventDefault();
 
-								setLoading(true);
-								try {
+// 								setLoading(true);
+// 								try {
 
-									await addWatchedTab.mutateAsync(props.row.original.id);
-								} catch {
-									console.log("Add Watched Tab Failed");
-								}
-								setLoading(false)
-							}}
-						>
-							Watch
-						</button>
-					);
-				},
-			}),
-		],
-		[addWatchedTab, loading, roadmapWatchedTabs]
-	);
+// 									await addWatchedTab.mutateAsync(props.row.original.id);
+// 								} catch {
+// 									console.log("Add Watched Tab Failed");
+// 								}
+// 								setLoading(false)
+// 							}}
+// 						>
+// 							Watch
+// 						</button>
+// 					);
+// 				},
+// 			}),
+// 		],
+// 		[addWatchedTab, loading, roadmapWatchedTabs]
+// 	);
 
-	const tabsTable = useReactTable({
-		columns: tabColumns,
-		data: mostRecentTabs ?? [],
-		getCoreRowModel: getCoreRowModel(),
-	});
+// 	const tabsTable = useReactTable({
+// 		columns: tabColumns,
+// 		data: mostRecentTabs ?? [],
+// 		getCoreRowModel: getCoreRowModel(),
+// 	});
 
-	return tabsTable;
-}
+// 	return tabsTable;
+// }
 
 function Roadmaps() {
 	const [loading, setLoading] = useState(false);
@@ -260,14 +260,34 @@ function Roadmaps() {
 		}),
 	});
 
+	const deleteWatchedTab = useMutation({
+		mutationFn: (id: number) =>
+			fetch(`/api/watched_tabs/${id}`, {
+				method: "DELETE",
+			}).then((res) => res.json()),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+		},
+	});
+
+	const addWatchedTab = useMutation({
+		mutationFn: (tab_id: string) =>
+			fetch(`/api/watched_tabs/add/${tab_id}`, {
+				method: "POST",
+			}).then((res) => res.json()),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+		},
+	});
+
 	const roadmapTable = useReactTable({
 		columns: roadmapColumns,
 		data: roadmapActivity.data ?? [],
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	const watchedTabsTable = useWatchedTabsTable(roadmapWatchedTabs.data, mostRecentTabs.data);
-	const tabsTable = useMostRecentTabsTable(mostRecentTabs.data, roadmapWatchedTabs.data);
+	// const watchedTabsTable = useWatchedTabsTable(roadmapWatchedTabs.data, mostRecentTabs.data);
+	// const tabsTable = useMostRecentTabsTable(mostRecentTabs.data, roadmapWatchedTabs.data);
 
 	const recheck = useMutation({
 		mutationFn: () =>
@@ -313,6 +333,105 @@ function Roadmaps() {
 				</button>
 			</div>
 
+			<div className="max-w-4xl mb-8 mx-auto px-4">
+				<h3 className="text-2xl font-bold mb-4">Watched Tabs</h3>
+				{roadmapWatchedTabs.isError ?
+					<p>There's been an error fetching watched tabs</p>
+				: mostRecentTabs.isError ?
+					<p>There's been an error fetching most recent tabs</p>
+				: roadmapWatchedTabs.isPending || mostRecentTabs.isPending ?
+					<p>Fetching tabs...</p>
+				: roadmapWatchedTabs.data.length === 0 || mostRecentTabs.data.length == 0 ?
+					<p>There are no saved tabs</p>
+				: (
+					<>
+						{roadmapWatchedTabs.data.map((w) => {
+							const full_tab = mostRecentTabs.data.find(t => t.id == w.tab_id);
+
+							return (
+								<div className="mb-2">
+									<p>
+										{full_tab?.name ?? "Tab missing from most recent list"}{" "}
+										{full_tab && (
+											<>
+												Added: <span className="break-words">{formatDate(w.timestamp)}</span>{" "}
+												<a 
+													target="_blank"
+													referrerPolicy="no-referrer"
+													href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${full_tab.slug}`}
+													className="text-green-700 hover:text-green-400 focus-visible:text-green-400"
+												>Link</a>
+											</>
+										)}
+									</p>
+									<p>
+										<button
+											disabled={loading}
+											className="text-green-700 hover:text-green-400 focus-visible:text-green-400 disabled:text-gray-400"
+											onClick={async (e) => {
+												e.preventDefault();
+
+												setLoading(true);
+												try {
+													await deleteWatchedTab.mutateAsync(w.id)
+												} catch  {
+													console.log("Delete watched tab failed");
+												}
+												setLoading(false);
+											}}
+										>
+											Unwatch
+										</button>
+									</p>
+								</div>
+							);
+						})}
+						<h3 className="text-2xl font-bold mb-4">Other Tabs</h3>
+						<div className="flex flex-wrap gap-4">
+						{mostRecentTabs.data.map((t) => {
+							if (roadmapWatchedTabs.data.some((w) => w.tab_id == t.id)) {
+								return;
+							}
+
+							return (
+								<div className="">
+									<p>
+										{t.name}{" "}
+										<a 
+											target="_blank"
+											referrerPolicy="no-referrer"
+											href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${t.slug}`}
+											className="text-green-700 hover:text-green-400 focus-visible:text-green-400"
+										>Link</a>
+									</p>
+									<p>
+										<button
+											disabled={loading}
+											className="text-green-700 hover:text-green-400 focus-visible:text-green-400 disabled:text-gray-400"
+											onClick={async (e) => {
+												e.preventDefault();
+
+												setLoading(true);
+												try {
+													await addWatchedTab.mutateAsync(t.id)
+												} catch  {
+													console.log("Delete watched tab failed");
+												}
+												setLoading(false);
+											}}
+										>
+											Watch
+										</button>
+									</p>
+								</div>
+							);
+						})}
+						</div>
+					</>
+				)}
+			</div>
+
+{/* 
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Watched Tabs</h3>
 				{roadmapWatchedTabs.isError ?
@@ -393,7 +512,8 @@ function Roadmaps() {
 						</Fragment>
 					</TableGrid>
 				)}
-			</div>
+			</div> 
+*/}
 
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Roadmap Activity</h3>

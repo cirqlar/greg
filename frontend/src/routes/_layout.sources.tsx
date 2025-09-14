@@ -16,10 +16,12 @@ export const Route = createFileRoute("/_layout/sources")({
 	component: Sources,
 });
 
-type TSource = { id: number; url: string; last_checked: string };
+type TSource = { id: number; url: string; last_checked: string, enabled: boolean };
 const columnHelper = createColumnHelper<TSource>();
 
 function Sources() {
+	const [loading, setLoading] = useState(false);
+
 	const [url, setUrl] = useState("");
 	const queryClient = useQueryClient();
 	const sources = useQuery<TSource[]>({
@@ -48,6 +50,20 @@ function Sources() {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify(source),
+			}).then((res) => res.json()),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["sources"] });
+		},
+	});
+	
+	const enableSource = useMutation({
+		mutationFn: ({id, enable}: {id: number, enable: boolean}) =>
+			fetch(`/api/source/${id}/enable/${enable}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				// body: JSON.stringify(source),
 			}).then((res) => res.json()),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["sources"] });
@@ -93,20 +109,49 @@ function Sources() {
 			columnHelper.display({
 				id: "delete",
 				cell: (props) => (
-					<button
-						className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
-						onClick={async (e) => {
-							e.preventDefault();
+					<>
+						<button
+							disabled={loading}
+							className="bg-green-700 px-4 py-3 uppercase font-bold rounded mr-2 disabled:bg-gray-700"
+							onClick={async (e) => {
+								e.preventDefault();
 
-							deleteSource.mutate(props.row.original.id);
-						}}
-					>
-						DEL
-					</button>
+								setLoading(true);
+								try {
+									await enableSource.mutateAsync({ 
+										id: props.row.original.id,
+										enable: !props.row.original.enabled
+									});
+								} catch {
+									console.log("deletin source failed")
+								}
+								setLoading(false);
+							}}
+						>
+							{props.row.original.enabled ? "DIS" : "ENA"}
+						</button>
+						<button
+							disabled={loading}
+							className="bg-green-700 px-4 py-3 uppercase font-bold rounded disabled:bg-gray-700"
+							onClick={async (e) => {
+								e.preventDefault();
+
+								setLoading(true);
+								try {
+									await deleteSource.mutateAsync(props.row.original.id);
+								} catch {
+									console.log("deletin source failed")
+								}
+								setLoading(false);
+							}}
+						>
+							DEL
+						</button>
+					</>
 				),
 			}),
 		],
-		[deleteSource]
+		[deleteSource, enableSource, loading]
 	);
 
 	const table = useReactTable({
@@ -123,7 +168,13 @@ function Sources() {
 					onSubmit={async (e) => {
 						e.preventDefault();
 
-						addSource.mutate({ url: url.trim() });
+						setLoading(true);
+						try {
+							await addSource.mutateAsync({ url: url.trim() });
+						} catch {
+							console.log("adding source failed")
+						}
+						setLoading(false);
 					}}
 				>
 					<label className="block mb-4 text-xl" htmlFor="password">
@@ -140,8 +191,8 @@ function Sources() {
 							placeholder="Url"
 						/>
 						<button
-							disabled={addSource.isPending || deleteSource.isPending}
-							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+							disabled={addSource.isPending || deleteSource.isPending || loading}
+							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded disabled:bg-gray-700"
 							type="submit"
 						>
 							Add

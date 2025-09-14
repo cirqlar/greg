@@ -190,6 +190,59 @@ pub async fn add_source(
     }
 }
 
+#[post("/source/{id}/enable/{enabled}")]
+pub async fn enable_source(
+    path: web::Path<(u32, bool)>,
+    data: AppData,
+    req: HttpRequest,
+) -> impl Responder {
+    let (source_id, new_enabled) = path.into_inner();
+
+    let db = data.db.connect().unwrap();
+
+    if is_logged_in(&req, db.clone()).await {
+        info!(
+            "[Update Source] {} source",
+            if new_enabled { "Enabling" } else { "Disabling" }
+        );
+
+        let result = db
+            .execute(
+                &format!("UPDATE {SOURCES_T} SET failed_count = ?1, enabled = ?2 WHERE id = ?3"),
+                (0, if new_enabled { 1 } else { 0 }, source_id),
+            )
+            .await;
+
+        match result {
+            Ok(success) => {
+                if success >= 1 {
+                    info!("[Update Source] Updated source successfully");
+                    HttpResponse::Ok().json(Success {
+                        message: "Source updated successfully".into(),
+                    })
+                } else {
+                    error!(
+                        "[Update Source] Rows affected in insert not 1, is: {}",
+                        success
+                    );
+                    HttpResponse::InternalServerError().json(Failure {
+                        message: "Unexpected issue updating source".into(),
+                    })
+                }
+            }
+            Err(err) => {
+                error!("[Update Source] Updating source failed with err: {}", err);
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't update source. Err: {}", err),
+                })
+            }
+        }
+    } else {
+        error!("[Update Source] Failed due to auth error");
+        return_password_error()
+    }
+}
+
 #[post("/watched_tabs/add/{tab_id}")]
 pub async fn add_watched_tab(
     path: web::Path<String>,

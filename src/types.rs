@@ -21,6 +21,8 @@ pub struct Source {
         serialize_with = "serialize_timestamp"
     )]
     pub last_checked: OffsetDateTime,
+    pub enabled: bool,
+    pub failed_count: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -248,6 +250,8 @@ pub struct RDBChangeAlt {
     pub tab_name: Option<String>,
     pub tab_slug: Option<String>,
     pub tab_db_id: Option<u32>,
+
+    pub card_tab_name: Option<String>,
 }
 
 impl RDBChangeAlt {
