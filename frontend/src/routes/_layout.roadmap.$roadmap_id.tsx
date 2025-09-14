@@ -22,6 +22,7 @@ type TCardAdded = {
 	current_card_description: string;
 	current_card_image_url?: string;
 	current_card_slug: string;
+	card_tab_name: string;
 };
 
 type TCardRemoved = {
@@ -32,6 +33,7 @@ type TCardRemoved = {
 	previous_card_description: string;
 	previous_card_image_url?: string;
 	previous_card_slug: string;
+	card_tab_name: string;
 };
 
 type TCardModified = {
@@ -48,6 +50,7 @@ type TCardModified = {
 	current_card_description: string;
 	current_card_image_url?: string;
 	current_card_slug: string;
+	card_tab_name: string;
 };
 
 type TRoadmapChange = {
@@ -128,6 +131,7 @@ function Roadmap() {
 									<div className="flex flex-col border-2 rounded border-green-700 overflow-hidden pb-2 text-sm">
 										<div className="w-full aspect-video mb-2">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
 										<h3 className="text-xl px-2 mb-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}>link</a></h3>
+										<p className="px-2 mb-2">{change.card_tab_name}</p>
 										{change.current_card_description}
 									</div>
 								);
@@ -137,6 +141,7 @@ function Roadmap() {
 										{/* Image resource is removed with card it seems */}
 										{/* <div className="w-full aspect-video mb-2">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div> */}
 										<h3 className="text-xl pt-2 px-2 mb-2">{change.previous_card_name}</h3>
+										<p className="px-2 mb-2">{change.card_tab_name}</p>
 										{change.previous_card_description}
 									</div>
 								);
@@ -146,6 +151,7 @@ function Roadmap() {
 										<div className="w-full aspect-video">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div>
 										<div className="w-full aspect-video">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
 										<div className="col-span-full px-2">
+											<p>Tab: {change.card_tab_name}</p>
 											Changes: {change.changes}
 										</div>
 										<div><h3 className="text-xl px-2">{change.previous_card_name}</h3></div>
