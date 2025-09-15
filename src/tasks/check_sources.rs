@@ -63,7 +63,7 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             &source.url,
             res.expect_err("must be an error")
         );
-        error!("[Check Sources] {}", err);
+        error!("[Check Sources] {err}");
         return SourceActivity::Failed {
             source_id: source.id,
             source_url: source.url,
@@ -78,7 +78,7 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             &source.url,
             res.status()
         );
-        error!("[Check Sources] {}", err);
+        error!("[Check Sources] {err}");
         return SourceActivity::Failed {
             source_id: source.id,
             source_url: source.url,
@@ -94,7 +94,7 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             &source.url,
             content.expect_err("must be an error")
         );
-        error!("[Check Sources] {}", err);
+        error!("[Check Sources] {err}");
         return SourceActivity::Failed {
             source_id: source.id,
             source_url: source.url,
@@ -110,7 +110,7 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             &source.url,
             channel.expect_err("must be an error")
         );
-        error!("[Check Sources] {}", err);
+        error!("[Check Sources] {err}");
         return SourceActivity::Failed {
             source_id: source.id,
             source_url: source.url,
@@ -180,15 +180,12 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             content_url = entry.links[0].href.clone();
         } else if !entry.links.is_empty() {
             content_url = entry.links[0].href.clone();
-            warn!("[Check Sources] Using first url for entry {}", content_url);
+            warn!("[Check Sources] Using first url for entry {content_url}");
         } else if let Some(ref content) = entry.content
             && let Some(ref url) = content.src
         {
             content_url = url.href.clone();
-            warn!(
-                "[Check Sources] Using content url for entry {}",
-                content_url
-            );
+            warn!("[Check Sources] Using content url for entry {content_url}");
         } else {
             content_url = "No Url".into();
         }
@@ -198,17 +195,13 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
         {
             pub_time
         } else {
-            error!(
-                "[Check Sources] Issue parsing published for post at {}",
-                content_url
-            );
+            error!("[Check Sources] Issue parsing published for post at {content_url}");
             break;
         };
 
         if pub_time <= source.last_checked {
             warn!(
-                "[Check Sources] Last post checked at url {} was published {}",
-                content_url, pub_time
+                "[Check Sources] Last post checked at url {content_url} was published {pub_time}"
             );
             break;
         }
@@ -258,10 +251,7 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
 async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn: Connection) {
     match activity {
         SourceActivity::Disabled { source_url } => {
-            info!(
-                "[Check Sources]:[Handle Activity] Source at {} remains disabled",
-                source_url
-            );
+            info!("[Check Sources]:[Handle Activity] Source at {source_url} remains disabled");
         }
         SourceActivity::Failed {
             source_id,
@@ -288,44 +278,37 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
 
             if let Err(err) = res {
                 error!(
-                    "[Check Sources]:[Handle Activity] failed to update failed source at {} for reason: {}",
-                    source_url, err
+                    "[Check Sources]:[Handle Activity] failed to update failed source at {source_url} for reason: {err}"
                 );
             } else if new_enabled == 0 {
                 error!(
-                    "[Check Sources]:[Handle Activity] Disabling source at {} for reason: {}",
-                    source_url, reason
+                    "[Check Sources]:[Handle Activity] Disabling source at {source_url} for reason: {reason}"
                 );
 
                 #[cfg(feature = "mail")]
                 let res = crate::queries::mail::send_email_with_cient(
                     client,
                     "Source disabled",
-                    &format!("The source at {} has been disabled after failing too much. The error is {}", source_url, reason),
+                    &format!("The source at {source_url} has been disabled after failing too much. The error is {reason}"),
                     &format!(r#"
-                        <p>Url: {u}</p>
-                        <p>Link: <a href="{u}">Link</a></p>
-                        <p>Reason:</p><pre>{r}</pre>
-                    "#, u = source_url, r = reason)).await;
+                        <p>Url: {source_url}</p>
+                        <p>Link: <a href="{source_url}">Link</a></p>
+                        <p>Reason:</p><pre>{reason}</pre>
+                    "#)).await;
                 #[cfg(feature = "mail")]
                 if let Err(err) = res {
                     error!(
-                        "[Check Sources]:[Handle Activity] failed to send disabled email for source at {} for reason: {}",
-                        source_url, err
+                        "[Check Sources]:[Handle Activity] failed to send disabled email for source at {source_url} for reason: {err}"
                     );
                 }
             } else {
                 error!(
-                    "[Check Sources]:[Handle Activity] Source at {} has failed {} times",
-                    source_url, new_failed_count
+                    "[Check Sources]:[Handle Activity] Source at {source_url} has failed {new_failed_count} times"
                 );
             }
         }
         SourceActivity::Unchanged { source_url } => {
-            info!(
-                "[Check Sources]:[Handle Activity] Source at {} has no new posts",
-                source_url
-            );
+            info!("[Check Sources]:[Handle Activity] Source at {source_url} has no new posts");
         }
         SourceActivity::Changed {
             source_id,
@@ -345,8 +328,7 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
 
             if let Err(err) = res {
                 error!(
-                    "[Check Sources]:[Handle Activity] failed to update source at url {} for reason {}",
-                    source_url, err
+                    "[Check Sources]:[Handle Activity] failed to update source at url {source_url} for reason {err}"
                 );
             }
 
@@ -403,7 +385,7 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
 
 pub async fn check_sources(data: &AppData) {
     let start_time = OffsetDateTime::now_utc();
-    info!("[Check Sources] Starting check {}", start_time);
+    info!("[Check Sources] Starting check {start_time}");
 
     if !cfg!(feature = "mail") {
         warn!("[Check Sources] will not send emails as feature is not enabled");

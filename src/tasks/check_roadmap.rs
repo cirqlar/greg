@@ -357,11 +357,11 @@ async fn save_tab_and_assignment(
 ) -> anyhow::Result<u32> {
     let tab_id = save_tab_tx(db, tab)
         .await
-        .map_err(|e| StringError(format!("Failed to save tab {}", e)))?;
+        .map_err(|e| StringError(format!("Failed to save tab {e}")))?;
 
     save_tab_assignment_tx(db, activity_id, tab_id)
         .await
-        .map_err(|e| StringError(format!("Failed to save assignment {}", e)))?;
+        .map_err(|e| StringError(format!("Failed to save assignment {e}")))?;
 
     Ok(tab_id)
 }
@@ -427,7 +427,7 @@ async fn save_all_cards_sync_tx(
 
 async fn rollback_tx(tx: Transaction) {
     if let Err(e) = tx.rollback().await {
-        error!("[Check Roadmap] Failed to rollback {}", e);
+        error!("[Check Roadmap] Failed to rollback {e}");
     };
 }
 
@@ -741,7 +741,7 @@ pub async fn check_roadmap(data: &AppData) {
                     if let Err(e) =
                         save_all_cards_sync_tx(&tx, &roadmap, roadmap_id, &tab_ids).await
                     {
-                        error!("[Check Roadmap] Failed to save cards. err: {}", e);
+                        error!("[Check Roadmap] Failed to save cards. err: {e}");
                         rollback_tx(tx).await;
                         return;
                     };
@@ -772,7 +772,7 @@ pub async fn check_roadmap(data: &AppData) {
 
         // Finish
         if let Err(e) = tx.commit().await {
-            error!("[Check Roadmap] Failed to commit {}", e);
+            error!("[Check Roadmap] Failed to commit {e}");
             return;
         };
 
@@ -794,12 +794,9 @@ pub async fn check_roadmap(data: &AppData) {
                 .count();
             let base_url = env::var("VITE_BASE_URL").unwrap_or("Missing base url".into());
             let res = crate::queries::mail::send_email(
-                &format!("{} new changes on roadmap", count),
-                &format!("{}/roadmap/{}", base_url, roadmap_id),
-                &format!(
-                    r#"<a href="{}/roadmap/{}">View changes</a>"#,
-                    base_url, roadmap_id
-                ),
+                &format!("{count} new changes on roadmap"),
+                &format!("{base_url}/roadmap/{roadmap_id}"),
+                &format!(r#"<a href="{base_url}/roadmap/{roadmap_id}">View changes</a>"#),
             )
             .await;
 
@@ -809,15 +806,13 @@ pub async fn check_roadmap(data: &AppData) {
                     let body = success.text().await.unwrap_or("Missing Body".into());
                     if !status.is_success() {
                         error!(
-                            "[Check Roadmap] Change notification email request failed with status {} and body {}",
-                            status, body
+                            "[Check Roadmap] Change notification email request failed with status {status} and body {body}"
                         );
                     }
                 }
                 Err(failure) => {
                     error!(
-                        "[Check Roadmap] Change notification email failed to send with error: {}",
-                        failure
+                        "[Check Roadmap] Change notification email failed to send with error: {failure}"
                     )
                 }
             }
@@ -866,12 +861,12 @@ pub async fn check_roadmap(data: &AppData) {
         }
 
         if let Err(e) = save_all_cards_sync_tx(&tx, &roadmap, roadmap_id, &tab_ids).await {
-            error!("[Check Roadmap] Failed to save cards. err: {}", e);
+            error!("[Check Roadmap] Failed to save cards. err: {e}");
             rollback_tx(tx).await;
             return;
         };
         if let Err(e) = tx.commit().await {
-            error!("[Check Roadmap] Failed to commit {}", e);
+            error!("[Check Roadmap] Failed to commit {e}");
         };
     }
 

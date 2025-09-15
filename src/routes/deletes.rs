@@ -30,19 +30,16 @@ pub async fn delete_source(
                         message: "Source deleted successfully".into(),
                     })
                 } else {
-                    error!(
-                        "[Delete Source] Rows affected in deletion not 1, is: {}",
-                        success
-                    );
+                    error!("[Delete Source] Rows affected in deletion not 1, is: {success}");
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue deleting source".into(),
                     })
                 }
             }
             Err(err) => {
-                error!("[Delete Source] Deleting source failed with err: {}", err);
+                error!("[Delete Source] Deleting source failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't delete source. Err: {}", err),
+                    message: format!("Couldn't delete source. Err: {err}"),
                 })
             }
         }
@@ -68,12 +65,9 @@ pub async fn clear_all_activities(data: AppData, req: HttpRequest) -> impl Respo
                 })
             }
             Err(err) => {
-                error!(
-                    "[Delete All Activities] Deleting activities failed with err: {}",
-                    err
-                );
+                error!("[Delete All Activities] Deleting activities failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't delete all activities. Err: {}", err),
+                    message: format!("Couldn't delete all activities. Err: {err}"),
                 })
             }
         }
@@ -118,8 +112,7 @@ pub async fn clear_activities(
                     })
                 } else {
                     error!(
-                        "[Delete Activities] Rows affected in deletion not {}, is: {}",
-                        num, success
+                        "[Delete Activities] Rows affected in deletion not {num}, is: {success}"
                     );
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue adding source".into(),
@@ -127,12 +120,9 @@ pub async fn clear_activities(
                 }
             }
             Err(err) => {
-                error!(
-                    "[Delete Activities] Deleting activities failed with err: {}",
-                    err
-                );
+                error!("[Delete Activities] Deleting activities failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't delete activities. Err: {}", err),
+                    message: format!("Couldn't delete activities. Err: {err}"),
                 })
             }
         }
@@ -167,22 +157,16 @@ pub async fn delete_watched_tab(
                         message: "Watched tab deleted successfully".into(),
                     })
                 } else {
-                    error!(
-                        "[Delete Watched Tab] Rows affected in deletion not 1, is: {}",
-                        success
-                    );
+                    error!("[Delete Watched Tab] Rows affected in deletion not 1, is: {success}");
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue deleting watched tabs".into(),
                     })
                 }
             }
             Err(err) => {
-                error!(
-                    "[Delete Watched Tab] Deleting source failed with err: {}",
-                    err
-                );
+                error!("[Delete Watched Tab] Deleting source failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't delete watched tab. Err: {}", err),
+                    message: format!("Couldn't delete watched tab. Err: {err}"),
                 })
             }
         }

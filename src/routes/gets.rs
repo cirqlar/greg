@@ -45,9 +45,9 @@ pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
                 HttpResponse::Ok().json(sources)
             }
             Err(err) => {
-                error!("[Get Sources] Getting sources failed with err: {}", err);
+                error!("[Get Sources] Getting sources failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get sources. Err: {}", err),
+                    message: format!("Couldn't get sources. Err: {err}"),
                 })
             }
         }
@@ -68,9 +68,9 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
                 HttpResponse::Ok().json(activities)
             }
             Err(err) => {
-                error!("[Get Activity] Getting activities failed with err: {}", err);
+                error!("[Get Activity] Getting activities failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get activities. Err: {}", err),
+                    message: format!("Couldn't get activities. Err: {err}"),
                 })
             }
         }
@@ -93,11 +93,10 @@ pub async fn get_roadmap_activity(data: AppData, req: HttpRequest) -> impl Respo
             }
             Err(err) => {
                 error!(
-                    "[Get Roadmap Activity] Getting roadmap activities failed with err: {}",
-                    err
+                    "[Get Roadmap Activity] Getting roadmap activities failed with err: {err}"
                 );
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get roadmap activities. Err: {}", err),
+                    message: format!("Couldn't get roadmap activities. Err: {err}"),
                 })
             }
         }
@@ -120,11 +119,10 @@ pub async fn get_most_recent_tabs(data: AppData, req: HttpRequest) -> impl Respo
             }
             Err(err) => {
                 error!(
-                    "[Get Roadmap Tabs] Getting roadmap tabs failed with err: {}",
-                    err
+                    "[Get Roadmap Tabs] Getting roadmap tabs failed with err: {err}"
                 );
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get roadmap tabs. Err: {}", err),
+                    message: format!("Couldn't get roadmap tabs. Err: {err}"),
                 })
             }
         }
@@ -147,11 +145,10 @@ pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder
             }
             Err(err) => {
                 error!(
-                    "[Get Watched Tabs] Getting watched tabs failed with err: {}",
-                    err
+                    "[Get Watched Tabs] Getting watched tabs failed with err: {err}"
                 );
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get watched tabs. Err: {}", err),
+                    message: format!("Couldn't get watched tabs. Err: {err}"),
                 })
             }
         }
@@ -176,11 +173,10 @@ pub async fn get_changes(path: web::Path<u32>, data: AppData, req: HttpRequest) 
             }
             Err(err) => {
                 error!(
-                    "[Get Roadmap Changes] Getting roadmap changes failed with err: {}",
-                    err
+                    "[Get Roadmap Changes] Getting roadmap changes failed with err: {err}"
                 );
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't get roadmap changes. Err: {}", err),
+                    message: format!("Couldn't get roadmap changes. Err: {err}"),
                 })
             }
         }
