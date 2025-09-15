@@ -19,8 +19,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
         Ok(x) => x,
         Err(err) => {
             error!(
-                "[Login] PASSWORD is not set. Env get failed with err: {}",
-                err
+                "[Login] PASSWORD is not set. Env get failed with err: {err}"
             );
             return return_password_error();
         }
@@ -47,7 +46,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
                 info!("[Login] Insert successful");
             }
             Err(err) => {
-                error!("[Login] Inserting login key failed with err: {}", err);
+                error!("[Login] Inserting login key failed with err: {err}");
                 return HttpResponse::InternalServerError().json(Failure {
                     message: "Issue logging in".into(),
                 });
@@ -103,9 +102,9 @@ async fn test_source(url: &str) -> Option<HttpResponse> {
     let _url = match Url::parse(url) {
         Ok(x) => x,
         Err(err) => {
-            error!("[Add Source] Failed with error: {} for url: {}", err, url);
+            error!("[Add Source] Failed with error: {err} for url: {url}");
             return Some(HttpResponse::InternalServerError().json(Failure {
-                message: format!("Couldn't add source. Err: {}", err),
+                message: format!("Couldn't add source. Err: {err}"),
             }));
         }
     };
@@ -113,11 +112,10 @@ async fn test_source(url: &str) -> Option<HttpResponse> {
         Ok(x) => x,
         Err(err) => {
             error!(
-                "[Add Source] Failed due to network error: {} for url: {}",
-                err, url
+                "[Add Source] Failed due to network error: {err} for url: {url}"
             );
             return Some(HttpResponse::InternalServerError().json(Failure {
-                message: format!("Couldn't add source. Err: {}", err),
+                message: format!("Couldn't add source. Err: {err}"),
             }));
         }
     };
@@ -125,11 +123,10 @@ async fn test_source(url: &str) -> Option<HttpResponse> {
         Ok(x) => x,
         Err(err) => {
             error!(
-                "[Add Source] Failed due to result parse error: {} for url: {}",
-                err, url
+                "[Add Source] Failed due to result parse error: {err} for url: {url}"
             );
             return Some(HttpResponse::InternalServerError().json(Failure {
-                message: format!("Couldn't add source. Err: {}", err),
+                message: format!("Couldn't add source. Err: {err}"),
             }));
         }
     };
@@ -169,8 +166,7 @@ pub async fn add_source(
                     })
                 } else {
                     error!(
-                        "[Add Source] Rows affected in insert not 1, is: {}",
-                        success
+                        "[Add Source] Rows affected in insert not 1, is: {success}"
                     );
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue adding source".into(),
@@ -178,9 +174,9 @@ pub async fn add_source(
                 }
             }
             Err(err) => {
-                error!("[Add Source] Inserting source failed with err: {}", err);
+                error!("[Add Source] Inserting source failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't add source. Err: {}", err),
+                    message: format!("Couldn't add source. Err: {err}"),
                 })
             }
         }
@@ -222,8 +218,7 @@ pub async fn enable_source(
                     })
                 } else {
                     error!(
-                        "[Update Source] Rows affected in insert not 1, is: {}",
-                        success
+                        "[Update Source] Rows affected in insert not 1, is: {success}"
                     );
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue updating source".into(),
@@ -231,9 +226,9 @@ pub async fn enable_source(
                 }
             }
             Err(err) => {
-                error!("[Update Source] Updating source failed with err: {}", err);
+                error!("[Update Source] Updating source failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't update source. Err: {}", err),
+                    message: format!("Couldn't update source. Err: {err}"),
                 })
             }
         }
@@ -275,8 +270,7 @@ pub async fn add_watched_tab(
                     })
                 } else {
                     error!(
-                        "[Add Watched Tab] Rows affected in insert not 1, is: {}",
-                        success
+                        "[Add Watched Tab] Rows affected in insert not 1, is: {success}"
                     );
                     HttpResponse::InternalServerError().json(Failure {
                         message: "Unexpected issue adding watched tab".into(),
@@ -285,11 +279,10 @@ pub async fn add_watched_tab(
             }
             Err(err) => {
                 error!(
-                    "[Add Watched Tab] Inserting watched tab failed with err: {}",
-                    err
+                    "[Add Watched Tab] Inserting watched tab failed with err: {err}"
                 );
                 HttpResponse::InternalServerError().json(Failure {
-                    message: format!("Couldn't add Watched Tab. Err: {}", err),
+                    message: format!("Couldn't add Watched Tab. Err: {err}"),
                 })
             }
         }

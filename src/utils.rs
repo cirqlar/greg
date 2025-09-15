@@ -33,10 +33,7 @@ pub async fn is_logged_in(req: &HttpRequest, db: Connection) -> bool {
 
             match result {
                 Err(err) => {
-                    info!(
-                        "[LoggedInCheck] Searching key in db failed with error: {}",
-                        err
-                    );
+                    info!("[LoggedInCheck] Searching key in db failed with error: {err}");
                     false
                 }
                 Ok(mut res) => {
@@ -57,8 +54,7 @@ pub async fn is_logged_in(req: &HttpRequest, db: Connection) -> bool {
                     match serde_json::from_str::<OffsetDateTime>(timestamp) {
                         Err(err) => {
                             error!(
-                                "[LoggedInCheck] Timestamp: {} couldn't be parsed with err: {}",
-                                timestamp, err
+                                "[LoggedInCheck] Timestamp: {timestamp} couldn't be parsed with err: {err}"
                             );
                             false
                         }
