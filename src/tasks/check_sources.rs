@@ -214,10 +214,13 @@ async fn check_source(source: Source, client: reqwest::Client) -> SourceActivity
             .as_ref()
             .map_or_else(|| "Missing Content Title".into(), |t| t.content.clone());
 
-        let content_body = if let Some(ref summary) = entry.summary {
+        let content_body = if let Some(ref summary) = entry.summary
+            && let Some(_) = (!summary.content.trim().is_empty()).then_some(())
+        {
             summary.content.clone()
         } else if let Some(ref content) = entry.content
             && let Some(ref body) = content.body
+            && let Some(_) = (!body.trim().is_empty()).then_some(())
         {
             body.clone()
         } else {
