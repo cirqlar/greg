@@ -341,7 +341,7 @@ function Roadmaps() {
 					<p>There's been an error fetching most recent tabs</p>
 				: roadmapWatchedTabs.isPending || mostRecentTabs.isPending ?
 					<p>Fetching tabs...</p>
-				: roadmapWatchedTabs.data.length === 0 || mostRecentTabs.data.length == 0 ?
+				: roadmapWatchedTabs.data.length === 0 && mostRecentTabs.data.length == 0 ?
 					<p>There are no saved tabs</p>
 				: (
 					<>
