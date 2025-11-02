@@ -320,6 +320,11 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
             most_recent,
             posts,
         } => {
+            info!(
+                "[Check Sources]:[Handle Activity] Source at {source_url} has {} new posts",
+                posts.len()
+            );
+
             let res = conn
                 .execute(
                     &format!(
@@ -335,7 +340,7 @@ async fn handle_activity(activity: SourceActivity, client: reqwest::Client, conn
                 );
             }
 
-            for post in posts {
+            for post in posts.into_iter().rev() {
                 let res = conn
                     .execute(
                         &format!(
