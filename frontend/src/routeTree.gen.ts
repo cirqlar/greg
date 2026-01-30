@@ -8,160 +8,77 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as LayoutSourcesRouteImport } from './routes/_layout.sources'
+import { Route as LayoutRoadmapsRouteImport } from './routes/_layout.roadmaps'
+import { Route as LayoutActivityRouteImport } from './routes/_layout.activity'
+import { Route as LayoutRoadmapRoadmap_idRouteImport } from './routes/_layout.roadmap.$roadmap_id'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as LayoutImport } from './routes/_layout'
-import { Route as IndexImport } from './routes/index'
-import { Route as LayoutSourcesImport } from './routes/_layout.sources'
-import { Route as LayoutRoadmapsImport } from './routes/_layout.roadmaps'
-import { Route as LayoutActivityImport } from './routes/_layout.activity'
-import { Route as LayoutRoadmapRoadmapidImport } from './routes/_layout.roadmap.$roadmap_id'
-
-// Create/Update Routes
-
-const LayoutRoute = LayoutImport.update({
+const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const LayoutSourcesRoute = LayoutSourcesImport.update({
+const LayoutSourcesRoute = LayoutSourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
   getParentRoute: () => LayoutRoute,
 } as any)
-
-const LayoutRoadmapsRoute = LayoutRoadmapsImport.update({
+const LayoutRoadmapsRoute = LayoutRoadmapsRouteImport.update({
   id: '/roadmaps',
   path: '/roadmaps',
   getParentRoute: () => LayoutRoute,
 } as any)
-
-const LayoutActivityRoute = LayoutActivityImport.update({
+const LayoutActivityRoute = LayoutActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
   getParentRoute: () => LayoutRoute,
 } as any)
-
-const LayoutRoadmapRoadmapidRoute = LayoutRoadmapRoadmapidImport.update({
+const LayoutRoadmapRoadmap_idRoute = LayoutRoadmapRoadmap_idRouteImport.update({
   id: '/roadmap/$roadmap_id',
   path: '/roadmap/$roadmap_id',
   getParentRoute: () => LayoutRoute,
 } as any)
 
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/_layout': {
-      id: '/_layout'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof LayoutImport
-      parentRoute: typeof rootRoute
-    }
-    '/_layout/activity': {
-      id: '/_layout/activity'
-      path: '/activity'
-      fullPath: '/activity'
-      preLoaderRoute: typeof LayoutActivityImport
-      parentRoute: typeof LayoutImport
-    }
-    '/_layout/roadmaps': {
-      id: '/_layout/roadmaps'
-      path: '/roadmaps'
-      fullPath: '/roadmaps'
-      preLoaderRoute: typeof LayoutRoadmapsImport
-      parentRoute: typeof LayoutImport
-    }
-    '/_layout/sources': {
-      id: '/_layout/sources'
-      path: '/sources'
-      fullPath: '/sources'
-      preLoaderRoute: typeof LayoutSourcesImport
-      parentRoute: typeof LayoutImport
-    }
-    '/_layout/roadmap/$roadmap_id': {
-      id: '/_layout/roadmap/$roadmap_id'
-      path: '/roadmap/$roadmap_id'
-      fullPath: '/roadmap/$roadmap_id'
-      preLoaderRoute: typeof LayoutRoadmapRoadmapidImport
-      parentRoute: typeof LayoutImport
-    }
-  }
-}
-
-// Create and export the route tree
-
-interface LayoutRouteChildren {
-  LayoutActivityRoute: typeof LayoutActivityRoute
-  LayoutRoadmapsRoute: typeof LayoutRoadmapsRoute
-  LayoutSourcesRoute: typeof LayoutSourcesRoute
-  LayoutRoadmapRoadmapidRoute: typeof LayoutRoadmapRoadmapidRoute
-}
-
-const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutActivityRoute: LayoutActivityRoute,
-  LayoutRoadmapsRoute: LayoutRoadmapsRoute,
-  LayoutSourcesRoute: LayoutSourcesRoute,
-  LayoutRoadmapRoadmapidRoute: LayoutRoadmapRoadmapidRoute,
-}
-
-const LayoutRouteWithChildren =
-  LayoutRoute._addFileChildren(LayoutRouteChildren)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '': typeof LayoutRouteWithChildren
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
-  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
+  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '': typeof LayoutRouteWithChildren
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
-  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
+  '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/activity': typeof LayoutActivityRoute
   '/_layout/roadmaps': typeof LayoutRoadmapsRoute
   '/_layout/sources': typeof LayoutSourcesRoute
-  '/_layout/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmapidRoute
+  '/_layout/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | ''
     | '/activity'
     | '/roadmaps'
     | '/sources'
     | '/roadmap/$roadmap_id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '' | '/activity' | '/roadmaps' | '/sources' | '/roadmap/$roadmap_id'
+  to: '/' | '/activity' | '/roadmaps' | '/sources' | '/roadmap/$roadmap_id'
   id:
     | '__root__'
     | '/'
@@ -172,59 +89,79 @@ export interface FileRouteTypes {
     | '/_layout/roadmap/$roadmap_id'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LayoutRoute: typeof LayoutRouteWithChildren
 }
 
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof LayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_layout/sources': {
+      id: '/_layout/sources'
+      path: '/sources'
+      fullPath: '/sources'
+      preLoaderRoute: typeof LayoutSourcesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/roadmaps': {
+      id: '/_layout/roadmaps'
+      path: '/roadmaps'
+      fullPath: '/roadmaps'
+      preLoaderRoute: typeof LayoutRoadmapsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/activity': {
+      id: '/_layout/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof LayoutActivityRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/roadmap/$roadmap_id': {
+      id: '/_layout/roadmap/$roadmap_id'
+      path: '/roadmap/$roadmap_id'
+      fullPath: '/roadmap/$roadmap_id'
+      preLoaderRoute: typeof LayoutRoadmapRoadmap_idRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+  }
+}
+
+interface LayoutRouteChildren {
+  LayoutActivityRoute: typeof LayoutActivityRoute
+  LayoutRoadmapsRoute: typeof LayoutRoadmapsRoute
+  LayoutSourcesRoute: typeof LayoutSourcesRoute
+  LayoutRoadmapRoadmap_idRoute: typeof LayoutRoadmapRoadmap_idRoute
+}
+
+const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutActivityRoute: LayoutActivityRoute,
+  LayoutRoadmapsRoute: LayoutRoadmapsRoute,
+  LayoutSourcesRoute: LayoutSourcesRoute,
+  LayoutRoadmapRoadmap_idRoute: LayoutRoadmapRoadmap_idRoute,
+}
+
+const LayoutRouteWithChildren =
+  LayoutRoute._addFileChildren(LayoutRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LayoutRoute: LayoutRouteWithChildren,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/_layout"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/_layout": {
-      "filePath": "_layout.tsx",
-      "children": [
-        "/_layout/activity",
-        "/_layout/roadmaps",
-        "/_layout/sources",
-        "/_layout/roadmap/$roadmap_id"
-      ]
-    },
-    "/_layout/activity": {
-      "filePath": "_layout.activity.tsx",
-      "parent": "/_layout"
-    },
-    "/_layout/roadmaps": {
-      "filePath": "_layout.roadmaps.tsx",
-      "parent": "/_layout"
-    },
-    "/_layout/sources": {
-      "filePath": "_layout.sources.tsx",
-      "parent": "/_layout"
-    },
-    "/_layout/roadmap/$roadmap_id": {
-      "filePath": "_layout.roadmap.$roadmap_id.tsx",
-      "parent": "/_layout"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

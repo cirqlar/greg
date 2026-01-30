@@ -284,7 +284,7 @@ async fn new_roadmap_tx(db: &Transaction) -> anyhow::Result<u32> {
 }
 
 /// Save card assignment
-/// * `assign_ids` - activity, tab, card, section_pos, card_pos
+/// * `assign_ids` - activity, tab, section_pos, card_pos
 async fn save_card_assignment_tx(
     db: &Transaction,
     card_id: u32,
@@ -422,6 +422,38 @@ async fn save_all_cards_sync_tx(
         }
     }
     info!("Finished Saving Cards");
+    Ok(())
+}
+
+async fn save_all_tab_cards_sync_tx(
+    db: &Transaction,
+    roadmap: &Roadmap,
+    roadmap_id: u32,
+    tab_ids: &HashMap<String, u32>,
+    tab_index: usize,
+) -> anyhow::Result<()> {
+    let tab = &roadmap.tabs[tab_index];
+    let tab_id = tab_ids.get(&tab.id).unwrap();
+
+    info!("Saving all cards for tab {}", tab.name);
+
+    let cards = roadmap.cards.get(&tab.id).unwrap();
+
+    for card in cards {
+        let _ = save_card_and_assignment(
+            db,
+            card,
+            &[
+                roadmap_id,
+                *tab_id,
+                card.section_position.unwrap(),
+                card.card_position.unwrap(),
+            ],
+        )
+        .await?;
+    }
+
+    info!("Finished Saving Cards for tab {}", tab.name);
     Ok(())
 }
 
@@ -736,10 +768,16 @@ pub async fn check_roadmap(data: &AppData) {
                 RChange::TabCardsNotInCurrent { .. } => {
                     continue;
                 }
-                RChange::TabCardsNotInPrevious { .. } => {
-                    // Save all cards
-                    if let Err(e) =
-                        save_all_cards_sync_tx(&tx, &roadmap, roadmap_id, &tab_ids).await
+                RChange::TabCardsNotInPrevious { tab_index } => {
+                    // Save all cards for this tab
+                    if let Err(e) = save_all_tab_cards_sync_tx(
+                        &tx,
+                        &roadmap,
+                        roadmap_id,
+                        &tab_ids,
+                        *tab_index as usize,
+                    )
+                    .await
                     {
                         error!("[Check Roadmap] Failed to save cards. err: {e}");
                         rollback_tx(tx).await;
