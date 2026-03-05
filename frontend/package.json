@@ -17,6 +17,7 @@
     "@tanstack/react-router": "^1.120.10",
     "@tanstack/react-table": "^8.21.3",
     "dayjs": "^1.11.13",
+    "diff": "^8.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -24,8 +25,8 @@
     "@tanstack/router-vite-plugin": "^1.120.10",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^4.5.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.55.0",
