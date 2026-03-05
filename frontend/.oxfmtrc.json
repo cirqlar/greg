@@ -1,0 +1,9 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"sortTailwindcss": {
+		"stylesheet": "./src/global.css",
+		"functions": ["tw"]
+	},
+	"printWidth": 80,
+	"ignorePatterns": ["**/build/**", "**/dist/**", "**/routeTree.gen.ts", ".vscode/**"]
+}
