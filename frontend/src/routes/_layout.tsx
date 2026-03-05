@@ -42,7 +42,7 @@ function Layout() {
 
 	return (
 		<>
-			<header className="h-16 bg-black text-white flex items-center px-6">
+			<header className="flex h-16 items-center bg-black px-6 text-white">
 				<Link
 					className="mr-4 hover:text-green-500 focus:text-green-500"
 					to="/sources"

@@ -59,14 +59,14 @@ function Index() {
 	}
 
 	return (
-		<div className="w-full min-h-full h-full flex items-center justify-center">
+		<div className="flex h-full min-h-full w-full items-center justify-center">
 			{loginQuery.isPending ? (
 				<p>Loading...</p>
 			) : (
-				<div className="max-w-80 w-full">
+				<div className="w-full max-w-80">
 					<form onSubmit={submit}>
 						<label
-							className="block mb-4 text-2xl"
+							className="mb-4 block text-2xl"
 							htmlFor="password"
 						>
 							Password
@@ -76,14 +76,14 @@ function Index() {
 								value={password}
 								disabled={loading}
 								onChange={(e) => setPassword(e.target.value)}
-								className="block w-full text-black mr-2 px-4 py-3 rounded-sm"
+								className="mr-2 block w-full rounded-sm px-4 py-3 text-black"
 								id="password"
 								type="password"
 								placeholder="Password"
 							/>
 							<button
 								disabled={loading}
-								className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
+								className="h-full rounded-sm bg-green-700 px-4 py-3 font-bold uppercase"
 								type="submit"
 							>
 								Login

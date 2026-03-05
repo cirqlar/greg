@@ -43,7 +43,9 @@ const roadmapColumns = [
 	}),
 	roadmapColumnHelper.accessor("timestamp", {
 		cell: (info) => (
-			<span className="wrap-break-word">{formatDate(info.getValue())}</span>
+			<span className="wrap-break-word">
+				{formatDate(info.getValue())}
+			</span>
 		),
 		header: "Saved At",
 	}),
@@ -53,7 +55,7 @@ const roadmapColumns = [
 			<Link
 				to="/roadmap/$roadmap_id"
 				params={{ roadmap_id: props.row.original.id.toString() }}
-				className="bg-green-700 text-inherit inline-block px-4 py-3 uppercase font-bold rounded-sm"
+				className="inline-block rounded-sm bg-green-700 px-4 py-3 font-bold text-inherit uppercase"
 			>
 				Changes
 			</Link>
@@ -210,54 +212,57 @@ function Roadmaps() {
 	const queryClient = useQueryClient();
 	const roadmapActivity = useQuery<TRoadmapActivity[]>({
 		queryKey: ["roadmap_activity"],
-		queryFn: () => fetch("/api/roadmap_activity").then(async (res) => {
-			if (res.ok) {
-				return res.json();
-			} else {
-				let err;
-				try {
-					err = await res.json();
-				} catch {
-					err = "Non-json return from response";
+		queryFn: () =>
+			fetch("/api/roadmap_activity").then(async (res) => {
+				if (res.ok) {
+					return res.json();
+				} else {
+					let err;
+					try {
+						err = await res.json();
+					} catch {
+						err = "Non-json return from response";
+					}
+					console.log("Error fetching roadmap activity", err);
+					throw err;
 				}
-				console.log("Error fetching roadmap activity", err);
-				throw err;
-			}
-		}),
+			}),
 	});
 	const mostRecentTabs = useQuery<TRTab[]>({
 		queryKey: ["most_recent_tabs"],
-		queryFn: () => fetch("/api/most_recent_tabs").then(async (res) => {
-			if (res.ok) {
-				return res.json();
-			} else {
-				let err;
-				try {
-					err = await res.json();
-				} catch {
-					err = "Non-json return from response";
+		queryFn: () =>
+			fetch("/api/most_recent_tabs").then(async (res) => {
+				if (res.ok) {
+					return res.json();
+				} else {
+					let err;
+					try {
+						err = await res.json();
+					} catch {
+						err = "Non-json return from response";
+					}
+					console.log("Error fetching most recent tabs", err);
+					throw err;
 				}
-				console.log("Error fetching most recent tabs", err);
-				throw err;
-			}
-		}),
+			}),
 	});
 	const roadmapWatchedTabs = useQuery<TWatchedTab[]>({
 		queryKey: ["watched_tabs"],
-		queryFn: () => fetch("/api/watched_tabs").then(async (res) => {
-			if (res.ok) {
-				return res.json();
-			} else {
-				let err;
-				try {
-					err = await res.json();
-				} catch {
-					err = "Non-json return from response";
+		queryFn: () =>
+			fetch("/api/watched_tabs").then(async (res) => {
+				if (res.ok) {
+					return res.json();
+				} else {
+					let err;
+					try {
+						err = await res.json();
+					} catch {
+						err = "Non-json return from response";
+					}
+					console.log("Error fetching watched tabs", err);
+					throw err;
 				}
-				console.log("Error fetching watched tabs", err);
-				throw err;
-			}
-		}),
+			}),
 	});
 
 	const deleteWatchedTab = useMutation({
@@ -313,10 +318,10 @@ function Roadmaps() {
 
 	return (
 		<>
-			<div className="max-w-lg mx-auto px-4 mb-8 flex justify-end">
+			<div className="mx-auto mb-8 flex max-w-lg justify-end px-4">
 				<button
 					disabled={loading}
-					className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
+					className="h-full rounded-sm bg-green-700 px-4 py-3 font-bold uppercase"
 					onClick={async (e) => {
 						e.preventDefault();
 
@@ -333,34 +338,43 @@ function Roadmaps() {
 				</button>
 			</div>
 
-			<div className="max-w-4xl mb-8 mx-auto px-4">
-				<h3 className="text-2xl font-bold mb-4">Watched Tabs</h3>
-				{roadmapWatchedTabs.isError ?
+			<div className="mx-auto mb-8 max-w-4xl px-4">
+				<h3 className="mb-4 text-2xl font-bold">Watched Tabs</h3>
+				{roadmapWatchedTabs.isError ? (
 					<p>There's been an error fetching watched tabs</p>
-				: mostRecentTabs.isError ?
+				) : mostRecentTabs.isError ? (
 					<p>There's been an error fetching most recent tabs</p>
-				: roadmapWatchedTabs.isPending || mostRecentTabs.isPending ?
+				) : roadmapWatchedTabs.isPending || mostRecentTabs.isPending ? (
 					<p>Fetching tabs...</p>
-				: roadmapWatchedTabs.data.length === 0 && mostRecentTabs.data.length == 0 ?
+				) : roadmapWatchedTabs.data.length === 0 &&
+				  mostRecentTabs.data.length == 0 ? (
 					<p>There are no saved tabs</p>
-				: (
+				) : (
 					<>
 						{roadmapWatchedTabs.data.map((w) => {
-							const full_tab = mostRecentTabs.data.find(t => t.id == w.tab_id);
+							const full_tab = mostRecentTabs.data.find(
+								(t) => t.id == w.tab_id,
+							);
 
 							return (
 								<div className="mb-2">
 									<p>
-										{full_tab?.name ?? "Tab missing from most recent list"}{" "}
+										{full_tab?.name ??
+											"Tab missing from most recent list"}{" "}
 										{full_tab && (
 											<>
-												Added: <span className="wrap-break-word">{formatDate(w.timestamp)}</span>{" "}
-												<a 
+												Added:{" "}
+												<span className="wrap-break-word">
+													{formatDate(w.timestamp)}
+												</span>{" "}
+												<a
 													target="_blank"
 													referrerPolicy="no-referrer"
 													href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${full_tab.slug}`}
 													className="text-green-700 hover:text-green-400 focus-visible:text-green-400"
-												>Link</a>
+												>
+													Link
+												</a>
 											</>
 										)}
 									</p>
@@ -373,9 +387,13 @@ function Roadmaps() {
 
 												setLoading(true);
 												try {
-													await deleteWatchedTab.mutateAsync(w.id)
-												} catch  {
-													console.log("Delete watched tab failed");
+													await deleteWatchedTab.mutateAsync(
+														w.id,
+													);
+												} catch {
+													console.log(
+														"Delete watched tab failed",
+													);
 												}
 												setLoading(false);
 											}}
@@ -386,52 +404,62 @@ function Roadmaps() {
 								</div>
 							);
 						})}
-						<h3 className="text-2xl font-bold mb-4">Other Tabs</h3>
+						<h3 className="mb-4 text-2xl font-bold">Other Tabs</h3>
 						<div className="flex flex-wrap gap-4">
-						{mostRecentTabs.data.map((t) => {
-							if (roadmapWatchedTabs.data.some((w) => w.tab_id == t.id)) {
-								return;
-							}
+							{mostRecentTabs.data.map((t) => {
+								if (
+									roadmapWatchedTabs.data.some(
+										(w) => w.tab_id == t.id,
+									)
+								) {
+									return;
+								}
 
-							return (
-								<div className="">
-									<p>
-										{t.name}{" "}
-										<a 
-											target="_blank"
-											referrerPolicy="no-referrer"
-											href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${t.slug}`}
-											className="text-green-700 hover:text-green-400 focus-visible:text-green-400"
-										>Link</a>
-									</p>
-									<p>
-										<button
-											disabled={loading}
-											className="text-green-700 hover:text-green-400 focus-visible:text-green-400 disabled:text-gray-400"
-											onClick={async (e) => {
-												e.preventDefault();
+								return (
+									<div className="">
+										<p>
+											{t.name}{" "}
+											<a
+												target="_blank"
+												referrerPolicy="no-referrer"
+												href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${t.slug}`}
+												className="text-green-700 hover:text-green-400 focus-visible:text-green-400"
+											>
+												Link
+											</a>
+										</p>
+										<p>
+											<button
+												disabled={loading}
+												className="text-green-700 hover:text-green-400 focus-visible:text-green-400 disabled:text-gray-400"
+												onClick={async (e) => {
+													e.preventDefault();
 
-												setLoading(true);
-												try {
-													await addWatchedTab.mutateAsync(t.id)
-												} catch  {
-													console.log("Delete watched tab failed");
-												}
-												setLoading(false);
-											}}
-										>
-											Watch
-										</button>
-									</p>
-								</div>
-							);
-						})}
+													setLoading(true);
+													try {
+														await addWatchedTab.mutateAsync(
+															t.id,
+														);
+													} catch {
+														console.log(
+															"Delete watched tab failed",
+														);
+													}
+													setLoading(false);
+												}}
+											>
+												Watch
+											</button>
+										</p>
+									</div>
+								);
+							})}
 						</div>
 					</>
 				)}
 			</div>
 
-{/* 
+			{/*
 			<div className="max-w-4xl mb-8 mx-auto px-4">
 				<h3 className="text-2xl font-bold mb-4">Watched Tabs</h3>
 				{roadmapWatchedTabs.isError ?
@@ -515,38 +543,45 @@ function Roadmaps() {
 			</div> 
 */}
 
-			<div className="max-w-4xl mb-8 mx-auto px-4">
-				<h3 className="text-2xl font-bold mb-4">Roadmap Activity</h3>
-				{roadmapActivity.isError ?
+			<div className="mx-auto mb-8 max-w-4xl px-4">
+				<h3 className="mb-4 text-2xl font-bold">Roadmap Activity</h3>
+				{roadmapActivity.isError ? (
 					<p>There's been an error fetching roadmap activity</p>
-				: roadmapActivity.isPending ?
+				) : roadmapActivity.isPending ? (
 					<p>Fetching roadmap activity...</p>
-				: roadmapActivity.data.length === 0 ?
+				) : roadmapActivity.data.length === 0 ? (
 					<p>There is no saved roadmap activity</p>
-				: (
+				) : (
 					<TableGrid className={style.template_2}>
 						<Fragment>
-							{roadmapTable.getHeaderGroups().map((headerGroup) => (
-								<Fragment key={headerGroup.id}>
-									{headerGroup.headers.map((header) => (
-										<div key={header.id}>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext()
-													)}
-										</div>
-									))}
-								</Fragment>
-							))}
+							{roadmapTable
+								.getHeaderGroups()
+								.map((headerGroup) => (
+									<Fragment key={headerGroup.id}>
+										{headerGroup.headers.map((header) => (
+											<div key={header.id}>
+												{header.isPlaceholder
+													? null
+													: flexRender(
+															header.column
+																.columnDef
+																.header,
+															header.getContext(),
+														)}
+											</div>
+										))}
+									</Fragment>
+								))}
 						</Fragment>
 						<Fragment>
 							{roadmapTable.getRowModel().rows.map((row) => (
 								<Fragment key={row.id}>
 									{row.getVisibleCells().map((cell) => (
 										<div key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
 										</div>
 									))}
 								</Fragment>

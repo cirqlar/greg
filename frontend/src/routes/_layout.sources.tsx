@@ -16,7 +16,12 @@ export const Route = createFileRoute("/_layout/sources")({
 	component: Sources,
 });
 
-type TSource = { id: number; url: string; last_checked: string, enabled: boolean };
+type TSource = {
+	id: number;
+	url: string;
+	last_checked: string;
+	enabled: boolean;
+};
 const columnHelper = createColumnHelper<TSource>();
 
 function Sources() {
@@ -26,20 +31,21 @@ function Sources() {
 	const queryClient = useQueryClient();
 	const sources = useQuery<TSource[]>({
 		queryKey: ["sources"],
-		queryFn: () => fetch("/api/sources").then(async (res) => {
-			if (res.ok) {
-				return res.json();
-			} else {
-				let err;
-				try {
-					err = await res.json();
-				} catch {
-					err = "Non-json return from response";
+		queryFn: () =>
+			fetch("/api/sources").then(async (res) => {
+				if (res.ok) {
+					return res.json();
+				} else {
+					let err;
+					try {
+						err = await res.json();
+					} catch {
+						err = "Non-json return from response";
+					}
+					console.log("Error fetching sources", err);
+					throw err;
 				}
-				console.log("Error fetching sources", err);
-				throw err;
-			}
-		}),
+			}),
 	});
 
 	const addSource = useMutation({
@@ -55,9 +61,9 @@ function Sources() {
 			queryClient.invalidateQueries({ queryKey: ["sources"] });
 		},
 	});
-	
+
 	const enableSource = useMutation({
-		mutationFn: ({id, enable}: {id: number, enable: boolean}) =>
+		mutationFn: ({ id, enable }: { id: number; enable: boolean }) =>
 			fetch(`/api/source/${id}/enable/${enable}`, {
 				method: "POST",
 				headers: {
@@ -102,7 +108,9 @@ function Sources() {
 			}),
 			columnHelper.accessor("last_checked", {
 				cell: (info) => (
-					<span className="wrap-break-word">{formatDate(info.getValue())}</span>
+					<span className="wrap-break-word">
+						{formatDate(info.getValue())}
+					</span>
 				),
 				header: "Last Checked",
 			}),
@@ -112,18 +120,18 @@ function Sources() {
 					<>
 						<button
 							disabled={loading}
-							className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm mr-2 disabled:bg-gray-700"
+							className="mr-2 rounded-sm bg-green-700 px-4 py-3 font-bold uppercase disabled:bg-gray-700"
 							onClick={async (e) => {
 								e.preventDefault();
 
 								setLoading(true);
 								try {
-									await enableSource.mutateAsync({ 
+									await enableSource.mutateAsync({
 										id: props.row.original.id,
-										enable: !props.row.original.enabled
+										enable: !props.row.original.enabled,
 									});
 								} catch {
-									console.log("deletin source failed")
+									console.log("deletin source failed");
 								}
 								setLoading(false);
 							}}
@@ -132,15 +140,17 @@ function Sources() {
 						</button>
 						<button
 							disabled={loading}
-							className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm disabled:bg-gray-700"
+							className="rounded-sm bg-green-700 px-4 py-3 font-bold uppercase disabled:bg-gray-700"
 							onClick={async (e) => {
 								e.preventDefault();
 
 								setLoading(true);
 								try {
-									await deleteSource.mutateAsync(props.row.original.id);
+									await deleteSource.mutateAsync(
+										props.row.original.id,
+									);
 								} catch {
-									console.log("deletin source failed")
+									console.log("deletin source failed");
 								}
 								setLoading(false);
 							}}
@@ -151,7 +161,7 @@ function Sources() {
 				),
 			}),
 		],
-		[deleteSource, enableSource, loading]
+		[deleteSource, enableSource, loading],
 	);
 
 	const table = useReactTable({
@@ -162,8 +172,8 @@ function Sources() {
 
 	return (
 		<>
-			<div className="max-w-lg mx-auto px-4 mb-8">
-				<h3 className="text-2xl font-bold mb-4">Add Source</h3>
+			<div className="mx-auto mb-8 max-w-lg px-4">
+				<h3 className="mb-4 text-2xl font-bold">Add Source</h3>
 				<form
 					onSubmit={async (e) => {
 						e.preventDefault();
@@ -172,27 +182,33 @@ function Sources() {
 						try {
 							await addSource.mutateAsync({ url: url.trim() });
 						} catch {
-							console.log("adding source failed")
+							console.log("adding source failed");
 						}
 						setLoading(false);
 					}}
 				>
-					<label className="block mb-4 text-xl" htmlFor="password">
+					<label className="mb-4 block text-xl" htmlFor="password">
 						URL
 					</label>
 					<div className="flex">
 						<input
 							value={url}
-							disabled={addSource.isPending || deleteSource.isPending}
+							disabled={
+								addSource.isPending || deleteSource.isPending
+							}
 							onChange={(e) => setUrl(e.target.value)}
-							className="block w-full text-black mr-2 px-4 py-3 rounded-sm"
+							className="mr-2 block w-full rounded-sm px-4 py-3 text-black"
 							id="password"
 							type="url"
 							placeholder="Url"
 						/>
 						<button
-							disabled={addSource.isPending || deleteSource.isPending || loading}
-							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm disabled:bg-gray-700"
+							disabled={
+								addSource.isPending ||
+								deleteSource.isPending ||
+								loading
+							}
+							className="h-full rounded-sm bg-green-700 px-4 py-3 font-bold uppercase disabled:bg-gray-700"
 							type="submit"
 						>
 							Add
@@ -201,15 +217,15 @@ function Sources() {
 				</form>
 			</div>
 
-			<div className="max-w-4xl mx-auto px-4">
-				<h3 className="text-2xl font-bold mb-4">Sources</h3>
-				{sources.isError ? 
+			<div className="mx-auto max-w-4xl px-4">
+				<h3 className="mb-4 text-2xl font-bold">Sources</h3>
+				{sources.isError ? (
 					<p>There's been an error fetching sources</p>
-				: sources.isPending ?
+				) : sources.isPending ? (
 					<p>Fetching sources...</p>
-				: sources.data.length == 0 ?
+				) : sources.data.length == 0 ? (
 					<p>There are no saved sources</p>
-				: (
+				) : (
 					<TableGrid className={style.template_3}>
 						<Fragment>
 							{table.getHeaderGroups().map((headerGroup) => (
@@ -219,8 +235,9 @@ function Sources() {
 											{header.isPlaceholder
 												? null
 												: flexRender(
-														header.column.columnDef.header,
-														header.getContext()
+														header.column.columnDef
+															.header,
+														header.getContext(),
 													)}
 										</div>
 									))}
@@ -232,7 +249,10 @@ function Sources() {
 								<Fragment key={row.id}>
 									{row.getVisibleCells().map((cell) => (
 										<div key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
 										</div>
 									))}
 								</Fragment>

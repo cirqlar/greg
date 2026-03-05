@@ -5,5 +5,10 @@
 		"functions": ["tw"]
 	},
 	"printWidth": 80,
-	"ignorePatterns": ["**/build/**", "**/dist/**", "**/routeTree.gen.ts", ".vscode/**"]
+	"ignorePatterns": [
+		"**/build/**",
+		"**/dist/**",
+		"**/routeTree.gen.ts",
+		".vscode/**"
+	]
 }
