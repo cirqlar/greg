@@ -88,7 +88,7 @@ function Sources() {
 			}),
 			columnHelper.accessor("url", {
 				cell: (info) => (
-					<span className="break-words">
+					<span className="wrap-break-word">
 						<a
 							href={info.getValue()}
 							target="_blank"
@@ -102,7 +102,7 @@ function Sources() {
 			}),
 			columnHelper.accessor("last_checked", {
 				cell: (info) => (
-					<span className="break-words">{formatDate(info.getValue())}</span>
+					<span className="wrap-break-word">{formatDate(info.getValue())}</span>
 				),
 				header: "Last Checked",
 			}),
@@ -112,7 +112,7 @@ function Sources() {
 					<>
 						<button
 							disabled={loading}
-							className="bg-green-700 px-4 py-3 uppercase font-bold rounded mr-2 disabled:bg-gray-700"
+							className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm mr-2 disabled:bg-gray-700"
 							onClick={async (e) => {
 								e.preventDefault();
 
@@ -132,7 +132,7 @@ function Sources() {
 						</button>
 						<button
 							disabled={loading}
-							className="bg-green-700 px-4 py-3 uppercase font-bold rounded disabled:bg-gray-700"
+							className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm disabled:bg-gray-700"
 							onClick={async (e) => {
 								e.preventDefault();
 
@@ -185,14 +185,14 @@ function Sources() {
 							value={url}
 							disabled={addSource.isPending || deleteSource.isPending}
 							onChange={(e) => setUrl(e.target.value)}
-							className="block w-full text-black mr-2 px-4 py-3 rounded"
+							className="block w-full text-black mr-2 px-4 py-3 rounded-sm"
 							id="password"
 							type="url"
 							placeholder="Url"
 						/>
 						<button
 							disabled={addSource.isPending || deleteSource.isPending || loading}
-							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded disabled:bg-gray-700"
+							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm disabled:bg-gray-700"
 							type="submit"
 						>
 							Add

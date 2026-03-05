@@ -76,14 +76,14 @@ function Index() {
 								value={password}
 								disabled={loading}
 								onChange={(e) => setPassword(e.target.value)}
-								className="block w-full text-black mr-2 px-4 py-3 rounded"
+								className="block w-full text-black mr-2 px-4 py-3 rounded-sm"
 								id="password"
 								type="password"
 								placeholder="Password"
 							/>
 							<button
 								disabled={loading}
-								className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+								className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 								type="submit"
 							>
 								Login

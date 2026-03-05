@@ -43,7 +43,7 @@ const roadmapColumns = [
 	}),
 	roadmapColumnHelper.accessor("timestamp", {
 		cell: (info) => (
-			<span className="break-words">{formatDate(info.getValue())}</span>
+			<span className="wrap-break-word">{formatDate(info.getValue())}</span>
 		),
 		header: "Saved At",
 	}),
@@ -53,7 +53,7 @@ const roadmapColumns = [
 			<Link
 				to="/roadmap/$roadmap_id"
 				params={{ roadmap_id: props.row.original.id.toString() }}
-				className="bg-green-700 text-inherit inline-block px-4 py-3 uppercase font-bold rounded"
+				className="bg-green-700 text-inherit inline-block px-4 py-3 uppercase font-bold rounded-sm"
 			>
 				Changes
 			</Link>
@@ -88,13 +88,13 @@ const roadmapColumns = [
 // 						(mostRecentTabs ?? []).find((t) => t.id === tab_id)?.name ??
 // 						"Missing Tab";
 
-// 					return <span className="break-words">{tab_name}</span>;
+// 					return <span className="wrap-break-word">{tab_name}</span>;
 // 				},
 // 				header: "Tab Name",
 // 			}),
 // 			watchedTabColumnHelper.accessor("timestamp", {
 // 				cell: (info) => (
-// 					<span className="break-words">{formatDate(info.getValue())}</span>
+// 					<span className="wrap-break-word">{formatDate(info.getValue())}</span>
 // 				),
 // 				header: "Added At",
 // 			}),
@@ -104,7 +104,7 @@ const roadmapColumns = [
 // 				cell: (props) => (
 // 					<button
 // 						disabled={loading}
-// 						className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
+// 						className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 // 						onClick={async (e) => {
 // 							e.preventDefault();
 
@@ -151,15 +151,15 @@ const roadmapColumns = [
 // 	const tabColumns = useMemo(
 // 		() => [
 // 			tabColumnHelper.accessor("id", {
-// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				cell: (info) => <span className="wrap-break-word">{info.getValue()}</span>,
 // 				header: "ID",
 // 			}),
 // 			tabColumnHelper.accessor("name", {
-// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				cell: (info) => <span className="wrap-break-word">{info.getValue()}</span>,
 // 				header: "Name",
 // 			}),
 // 			tabColumnHelper.accessor("slug", {
-// 				cell: (info) => <span className="break-words">{info.getValue()}</span>,
+// 				cell: (info) => <span className="wrap-break-word">{info.getValue()}</span>,
 // 				header: "Slug",
 // 			}),
 // 			tabColumnHelper.display({
@@ -172,7 +172,7 @@ const roadmapColumns = [
 // 					return (
 // 						<button
 // 							disabled={isWatched || loading}
-// 							className="bg-green-700 px-4 py-3 uppercase font-bold rounded"
+// 							className="bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 // 							onClick={async (e) => {
 // 								e.preventDefault();
 
@@ -316,7 +316,7 @@ function Roadmaps() {
 			<div className="max-w-lg mx-auto px-4 mb-8 flex justify-end">
 				<button
 					disabled={loading}
-					className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+					className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 					onClick={async (e) => {
 						e.preventDefault();
 
@@ -354,7 +354,7 @@ function Roadmaps() {
 										{full_tab?.name ?? "Tab missing from most recent list"}{" "}
 										{full_tab && (
 											<>
-												Added: <span className="break-words">{formatDate(w.timestamp)}</span>{" "}
+												Added: <span className="wrap-break-word">{formatDate(w.timestamp)}</span>{" "}
 												<a 
 													target="_blank"
 													referrerPolicy="no-referrer"

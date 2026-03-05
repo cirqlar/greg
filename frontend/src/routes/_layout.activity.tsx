@@ -28,7 +28,7 @@ const columns = [
 	}),
 	columnHelper.accessor("post_url", {
 		cell: (info) => (
-			<span className="break-words">
+			<span className="wrap-break-word">
 				<a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">
 					{info.getValue()}
 				</a>
@@ -38,7 +38,7 @@ const columns = [
 	}),
 	columnHelper.accessor("source_url", {
 		cell: (info) => (
-			<span className="break-words">
+			<span className="wrap-break-word">
 				<a href={info.getValue()} target="_blank" referrerPolicy="no-referrer">
 					{info.getValue()}
 				</a>
@@ -47,7 +47,7 @@ const columns = [
 		header: "Source",
 	}),
 	columnHelper.accessor("timestamp", {
-		cell: (info) => <span className="break-words">{formatDate(info.getValue())}</span>,
+		cell: (info) => <span className="wrap-break-word">{formatDate(info.getValue())}</span>,
 		header: "Checked At",
 	}),
 ];
@@ -106,7 +106,7 @@ function Activity() {
 			<div className="max-w-lg mx-auto px-4 mb-8 flex justify-end">
 				<button
 					disabled={loading}
-					className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+					className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 					onClick={async (e) => {
 						e.preventDefault();
 
@@ -145,14 +145,14 @@ function Activity() {
 							value={num}
 							disabled={loading}
 							onChange={(e) => setNum(Number(e.target.value))}
-							className="block w-full text-black mr-2 px-4 py-3 rounded"
+							className="block w-full text-black mr-2 px-4 py-3 rounded-sm"
 							id="password"
 							type="number"
 							placeholder="Url"
 						/>
 						<button
 							disabled={loading}
-							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded"
+							className="h-full bg-green-700 px-4 py-3 uppercase font-bold rounded-sm"
 							type="submit"
 						>
 							Clear

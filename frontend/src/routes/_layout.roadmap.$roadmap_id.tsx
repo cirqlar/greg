@@ -61,7 +61,7 @@ type TRoadmapChange = {
 
 function render_change_paragraph(change_text: { text: string, wrap: boolean }[], disambig: string, green: boolean) {
 	return (
-		<p key={disambig} className={`px-2 break-words ${change_text[0].text[0] === '-' || change_text[0].text[0] === '.' ? 'pl-6' : ''}`}>
+		<p key={disambig} className={`px-2 wrap-break-word ${change_text[0].text[0] === '-' || change_text[0].text[0] === '.' ? 'pl-6' : ''}`}>
 			{change_text.map(({ text, wrap }, k) => (
 				<Fragment key={`${text} + ${disambig} + ${k}`}>
 					{wrap ? <span className={green ? "text-green-400" : "text-red-400"}>{text}</span> : text}
@@ -99,9 +99,9 @@ function Roadmap() {
 			let previous_card_description: ReactNode[] | null = null;
 
 			if (c.type === "card_added") {
-				current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 break-words ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
+				current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 wrap-break-word ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
 			} else if (c.type === "card_removed") {
-				previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 break-words ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
+				previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 wrap-break-word ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
 			} else if (c.type === "card_modified") {
 				if (c.previous_card_description !== c.current_card_description) {
 					const changes = diffWordsWithSpace(c.previous_card_description, c.current_card_description);
@@ -173,8 +173,8 @@ function Roadmap() {
 						current_text = []
 					}
 				} else {
-					previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 break-words ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
-					current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 break-words ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
+					previous_card_description = c.previous_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 wrap-break-word ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
+					current_card_description = c.current_card_description.split("\n").filter(s => s.trim().length != 0).map(s => <p key={s} className={`px-2 wrap-break-word ${s[0] === '-' || s[0] === '.' ? 'pl-6' : ''}`}>{s}</p>)
 				}
 			}
 
@@ -213,7 +213,7 @@ function Roadmap() {
 								return <div key={change.id} className="col-span-full">Tab removed: {change.tab_name}</div>;
 							} else if (change.type === "card_added") {
 								return (
-									<div key={change.id} className="flex flex-col border-2 rounded border-green-700 overflow-hidden pb-2 text-sm">
+									<div key={change.id} className="flex flex-col border-2 rounded-sm border-green-700 overflow-hidden pb-2 text-sm">
 										<div className="w-full aspect-video mb-2">{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
 										<h3 className="text-xl px-2 mb-2">{change.current_card_name} <a className="text-sm" target="_blank" referrerPolicy="no-referrer" href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}>link</a></h3>
 										<p className="px-2 mb-2">{change.card_tab_name}</p>
@@ -222,7 +222,7 @@ function Roadmap() {
 								);
 							} else if (change.type === "card_removed") {
 								return (
-									<div key={change.id} className="flex flex-col border-2 rounded border-red-700 overflow-hidden pb-2 text-sm">
+									<div key={change.id} className="flex flex-col border-2 rounded-sm border-red-700 overflow-hidden pb-2 text-sm">
 										{/* Image resource is removed with card it seems */}
 										{/* <div className="w-full aspect-video mb-2">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div> */}
 										<h3 className="text-xl pt-2 px-2 mb-2">{change.previous_card_name}</h3>
@@ -232,7 +232,7 @@ function Roadmap() {
 								);
 							} else if (change.type === "card_modified"){
 								return (
-									<div key={change.id} className={`grid gap-4 border-2 rounded border-blue-700 overflow-hidden pb-2 text-sm ${change.desc_changed ? 'grid-cols-2 col-span-full' : ''}`}>
+									<div key={change.id} className={`grid gap-4 border-2 rounded-sm border-blue-700 overflow-hidden pb-2 text-sm ${change.desc_changed ? 'grid-cols-2 col-span-full' : ''}`}>
 										<div className={`w-full aspect-video col-span-full ${change.img_changed ? 'border-2 border-green-400 rounded-t': ''}`}>{change.current_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.current_card_image_url} />}</div>
 										<div className="col-span-full px-2">
 											<p>Tab: {change.card_tab_name}</p>
