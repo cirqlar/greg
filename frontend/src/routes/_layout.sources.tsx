@@ -62,7 +62,7 @@ function Sources() {
 		},
 	});
 
-	const enableSource = useMutation({
+	const { mutateAsync: enableSourceAsync } = useMutation({
 		mutationFn: ({ id, enable }: { id: number; enable: boolean }) =>
 			fetch(`/api/source/${id}/enable/${enable}`, {
 				method: "POST",
@@ -76,15 +76,16 @@ function Sources() {
 		},
 	});
 
-	const deleteSource = useMutation({
-		mutationFn: (id: number) =>
-			fetch(`/api/source/${id}`, {
-				method: "DELETE",
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["sources"] });
-		},
-	});
+	const { mutateAsync: deleteSourceAsync, isPending: deleteSourceIsPending } =
+		useMutation({
+			mutationFn: (id: number) =>
+				fetch(`/api/source/${id}`, {
+					method: "DELETE",
+				}).then((res) => res.json()),
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["sources"] });
+			},
+		});
 
 	const columns = useMemo(
 		() => [
@@ -126,7 +127,7 @@ function Sources() {
 
 								setLoading(true);
 								try {
-									await enableSource.mutateAsync({
+									await enableSourceAsync({
 										id: props.row.original.id,
 										enable: !props.row.original.enabled,
 									});
@@ -146,7 +147,7 @@ function Sources() {
 
 								setLoading(true);
 								try {
-									await deleteSource.mutateAsync(
+									await deleteSourceAsync(
 										props.row.original.id,
 									);
 								} catch {
@@ -161,7 +162,7 @@ function Sources() {
 				),
 			}),
 		],
-		[deleteSource, enableSource, loading],
+		[deleteSourceAsync, enableSourceAsync, loading],
 	);
 
 	const table = useReactTable({
@@ -194,7 +195,7 @@ function Sources() {
 						<input
 							value={url}
 							disabled={
-								addSource.isPending || deleteSource.isPending
+								addSource.isPending || deleteSourceIsPending
 							}
 							onChange={(e) => setUrl(e.target.value)}
 							className="mr-2 block w-full rounded-sm px-4 py-3 text-black"
@@ -205,7 +206,7 @@ function Sources() {
 						<button
 							disabled={
 								addSource.isPending ||
-								deleteSource.isPending ||
+								deleteSourceIsPending ||
 								loading
 							}
 							className="h-full rounded-sm bg-green-700 px-4 py-3 font-bold uppercase disabled:bg-gray-700"
