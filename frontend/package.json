@@ -12,6 +12,7 @@
 	"lint": "oxlint",
 	"lint:fix": "oxlint --fix",
 	"fmt": "oxfmt",
+	"fmt:check": "oxfmt --check",
     "preview": "vite preview"
   },
   "dependencies": {
