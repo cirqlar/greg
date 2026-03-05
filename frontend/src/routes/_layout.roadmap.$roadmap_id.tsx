@@ -407,14 +407,26 @@ function Roadmap() {
 								change.type === "tab_added" ||
 								change.type === "tab_removed"
 							) {
-								return <TabChange change={change} key={change.id} />;
+								return (
+									<TabChange
+										change={change}
+										key={change.id}
+									/>
+								);
 							} else if (
 								change.type === "card_added" ||
 								change.type === "card_removed"
 							) {
-								return <CardChange change={change} key={change.id} />;
+								return (
+									<CardChange
+										change={change}
+										key={change.id}
+									/>
+								);
 							} else if (change.type === "card_modified") {
-								return <CardMod change={change} key={change.id} />;
+								return (
+									<CardMod change={change} key={change.id} />
+								);
 							}
 						})}
 					</div>
