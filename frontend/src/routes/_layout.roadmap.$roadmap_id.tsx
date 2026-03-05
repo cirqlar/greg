@@ -89,6 +89,285 @@ function render_change_paragraph(
 	);
 }
 
+function render_paragraphs(text: string) {
+	return text
+		.split("\n")
+		.filter((s) => s.trim().length != 0)
+		.map((s) => (
+			<p
+				key={s}
+				className={`px-2 wrap-break-word ${s[0] === "-" || s[0] === "." ? "pl-6" : ""}`}
+			>
+				{s}
+			</p>
+		));
+}
+
+function TabChange({ change }: { change: { id: number } & TTabChange }) {
+	return (
+		<div key={change.id} className="col-span-full">
+			Tab {change.type === "tab_added" ? "added" : "removed"}:{" "}
+			{change.tab_name}{" "}
+			{change.type === "tab_added" && (
+				<a
+					target="_blank"
+					referrerPolicy="no-referrer"
+					href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${change.tab_slug}`}
+				>
+					link
+				</a>
+			)}
+		</div>
+	);
+}
+
+function CardChange({
+	change,
+}: {
+	change: { id: number } & (TCardAdded | TCardRemoved);
+}) {
+	const description = render_paragraphs(
+		change.type === "card_added"
+			? change.current_card_description
+			: change.previous_card_description,
+	);
+
+	return (
+		<div
+			key={change.id}
+			className={`flex flex-col overflow-hidden rounded-sm border-2 pb-2 text-sm ${change.type === "card_added" ? "border-green-700" : "border-red-700"}`}
+		>
+			{change.type === "card_added" && (
+				<div className="mb-2 aspect-video w-full">
+					<img
+						className="h-full w-full object-cover"
+						loading="lazy"
+						src={change.current_card_image_url}
+					/>
+				</div>
+			)}
+			<h3 className="mb-2 px-2 text-xl">
+				{change.type === "card_added"
+					? change.current_card_name
+					: change.previous_card_name}{" "}
+				{change.type === "card_added" && (
+					<a
+						className="text-sm"
+						target="_blank"
+						referrerPolicy="no-referrer"
+						href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}
+					>
+						link
+					</a>
+				)}
+			</h3>
+			<p className="mb-2 px-2">{change.card_tab_name}</p>
+			{description}
+		</div>
+	);
+}
+
+function CardMod({ change }: { change: { id: number } & TCardModified }) {
+	const desc_changed =
+		change.current_card_description != change.previous_card_description;
+	const img_changed =
+		change.current_card_image_url != change.previous_card_image_url;
+
+	const title =
+		change.current_card_name != change.previous_card_name
+			? diffWordsWithSpace(
+					change.previous_card_name,
+					change.current_card_name,
+				).map((change) => {
+					if (change.added) {
+						return (
+							<span key={change.value} className="text-green-400">
+								{change.value}
+							</span>
+						);
+					} else if (change.removed) {
+						return (
+							<span key={change.value} className="text-red-400">
+								{change.value}
+							</span>
+						);
+					} else {
+						return <span key={change.value}>{change.value}</span>;
+					}
+				})
+			: change.current_card_name;
+
+	const { previous_card_description, current_card_description } =
+		useMemo(() => {
+			if (
+				change.previous_card_description ==
+				change.current_card_description
+			) {
+				return {
+					previous_card_description: change.previous_card_description,
+					current_card_description: change.current_card_description,
+				};
+			} else {
+				const diffs = diffWordsWithSpace(
+					change.previous_card_description,
+					change.current_card_description,
+				);
+
+				let previous_card_description: ReactNode[] = [];
+				let current_card_description: ReactNode[] = [];
+
+				let previous_text: TSingleTextChange[] = [];
+				let current_text: TSingleTextChange[] = [];
+
+				for (let i = 0; i < diffs.length; i++) {
+					let diff = diffs[i];
+
+					if (diff.value.startsWith("\n")) {
+						if (!diff.added && previous_text.length > 0) {
+							previous_card_description.push(
+								render_change_paragraph(
+									previous_text,
+									`${change.current_card_id} + ${i}`,
+									false,
+								),
+							);
+
+							previous_text = [];
+						}
+
+						if (!diff.removed && current_text.length > 0) {
+							current_card_description.push(
+								render_change_paragraph(
+									current_text,
+									`${change.current_card_id} + ${i}`,
+									true,
+								),
+							);
+
+							current_text = [];
+						}
+					}
+
+					let arr = diff.value.split("\n");
+
+					for (let j = 0; j < arr.length; j++) {
+						const is_last = j === arr.length - 1;
+						const current_v = arr[j];
+
+						if (current_v.length === 0) continue;
+
+						if (!diff.added) {
+							previous_text.push({
+								text: current_v,
+								wrap: diff.removed,
+							});
+						}
+
+						if (!diff.removed) {
+							current_text.push({
+								text: current_v,
+								wrap: diff.added,
+							});
+						}
+
+						if (!is_last) {
+							if (!diff.added && previous_text.length > 0) {
+								previous_card_description.push(
+									render_change_paragraph(
+										previous_text,
+										`${change.current_card_id} + ${i} + ${j}`,
+										false,
+									),
+								);
+
+								previous_text = [];
+							}
+
+							if (!diff.removed && current_text.length > 0) {
+								current_card_description.push(
+									render_change_paragraph(
+										current_text,
+										`${change.current_card_id} + ${i} + ${j}`,
+										true,
+									),
+								);
+
+								current_text = [];
+							}
+						}
+					}
+				}
+
+				if (previous_text.length > 0) {
+					previous_card_description.push(
+						render_change_paragraph(
+							previous_text,
+							change.current_card_id,
+							false,
+						),
+					);
+
+					previous_text = [];
+				}
+
+				if (current_text.length > 0) {
+					current_card_description.push(
+						render_change_paragraph(
+							current_text,
+							change.current_card_id,
+							true,
+						),
+					);
+
+					current_text = [];
+				}
+				return { previous_card_description, current_card_description };
+			}
+		}, [
+			change.current_card_description,
+			change.previous_card_description,
+			change.current_card_id,
+		]);
+
+	return (
+		<div
+			key={change.id}
+			className={`grid gap-4 overflow-hidden rounded-sm border-2 border-blue-700 pb-2 text-sm ${desc_changed ? "col-span-full grid-cols-2" : ""}`}
+		>
+			<div
+				className={`col-span-full aspect-video w-full ${img_changed ? "rounded-t border-2 border-green-400" : ""}`}
+			>
+				{change.current_card_image_url && (
+					<img
+						className="h-full w-full object-cover"
+						loading="lazy"
+						src={change.current_card_image_url}
+					/>
+				)}
+			</div>
+			<div className="col-span-full px-2">
+				<p>Tab: {change.card_tab_name}</p>
+			</div>
+
+			<div className="col-span-full">
+				<h3 className="px-2 text-xl">
+					{title}{" "}
+					<a
+						className="text-sm"
+						target="_blank"
+						referrerPolicy="no-referrer"
+						href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}
+					>
+						link
+					</a>
+				</h3>
+			</div>
+			{desc_changed && <div>{previous_card_description}</div>}
+			<div>{current_card_description}</div>
+		</div>
+	);
+}
+
 function Roadmap() {
 	const { roadmap_id } = Route.useParams();
 
@@ -110,209 +389,6 @@ function Roadmap() {
 				}
 			}),
 	});
-	const roadmapChangesMapped = useMemo(
-		() =>
-			(roadmapChanges.data ?? []).map((c) => {
-				let current_card_description: ReactNode[] | null = null;
-				let previous_card_description: ReactNode[] | null = null;
-
-				if (c.type === "card_added") {
-					current_card_description = c.current_card_description
-						.split("\n")
-						.filter((s) => s.trim().length != 0)
-						.map((s) => (
-							<p
-								key={s}
-								className={`px-2 wrap-break-word ${s[0] === "-" || s[0] === "." ? "pl-6" : ""}`}
-							>
-								{s}
-							</p>
-						));
-				} else if (c.type === "card_removed") {
-					previous_card_description = c.previous_card_description
-						.split("\n")
-						.filter((s) => s.trim().length != 0)
-						.map((s) => (
-							<p
-								key={s}
-								className={`px-2 wrap-break-word ${s[0] === "-" || s[0] === "." ? "pl-6" : ""}`}
-							>
-								{s}
-							</p>
-						));
-				} else if (c.type === "card_modified") {
-					if (
-						c.previous_card_description !==
-						c.current_card_description
-					) {
-						const changes = diffWordsWithSpace(
-							c.previous_card_description,
-							c.current_card_description,
-						);
-
-						previous_card_description = [];
-						current_card_description = [];
-
-						let previous_text: TSingleTextChange[] = [];
-						let current_text: TSingleTextChange[] = [];
-
-						for (let i = 0; i < changes.length; i++) {
-							let change = changes[i];
-
-							if (change.value.startsWith("\n")) {
-								if (!change.added && previous_text.length > 0) {
-									previous_card_description.push(
-										render_change_paragraph(
-											previous_text,
-											`${c.current_card_id} + ${i}`,
-											false,
-										),
-									);
-
-									previous_text = [];
-								}
-
-								if (
-									!change.removed &&
-									current_text.length > 0
-								) {
-									current_card_description.push(
-										render_change_paragraph(
-											current_text,
-											`${c.current_card_id} + ${i}`,
-											true,
-										),
-									);
-
-									current_text = [];
-								}
-							}
-
-							let arr = change.value.split("\n");
-
-							for (let j = 0; j < arr.length; j++) {
-								const is_last = j === arr.length - 1;
-								const current_v = arr[j];
-
-								if (current_v.length === 0) continue;
-
-								if (!change.added) {
-									previous_text.push({
-										text: current_v,
-										wrap: change.removed,
-									});
-								}
-
-								if (!change.removed) {
-									current_text.push({
-										text: current_v,
-										wrap: change.added,
-									});
-								}
-
-								if (!is_last) {
-									if (
-										!change.added &&
-										previous_text.length > 0
-									) {
-										previous_card_description.push(
-											render_change_paragraph(
-												previous_text,
-												`${c.current_card_id} + ${i} + ${j}`,
-												false,
-											),
-										);
-
-										previous_text = [];
-									}
-
-									if (
-										!change.removed &&
-										current_text.length > 0
-									) {
-										current_card_description.push(
-											render_change_paragraph(
-												current_text,
-												`${c.current_card_id} + ${i} + ${j}`,
-												true,
-											),
-										);
-
-										current_text = [];
-									}
-								}
-							}
-						}
-
-						if (previous_text.length > 0) {
-							previous_card_description.push(
-								render_change_paragraph(
-									previous_text,
-									c.current_card_id,
-									false,
-								),
-							);
-
-							previous_text = [];
-						}
-
-						if (current_text.length > 0) {
-							current_card_description.push(
-								render_change_paragraph(
-									current_text,
-									c.current_card_id,
-									true,
-								),
-							);
-
-							current_text = [];
-						}
-					} else {
-						previous_card_description = c.previous_card_description
-							.split("\n")
-							.filter((s) => s.trim().length != 0)
-							.map((s) => (
-								<p
-									key={s}
-									className={`px-2 wrap-break-word ${s[0] === "-" || s[0] === "." ? "pl-6" : ""}`}
-								>
-									{s}
-								</p>
-							));
-						current_card_description = c.current_card_description
-							.split("\n")
-							.filter((s) => s.trim().length != 0)
-							.map((s) => (
-								<p
-									key={s}
-									className={`px-2 wrap-break-word ${s[0] === "-" || s[0] === "." ? "pl-6" : ""}`}
-								>
-									{s}
-								</p>
-							));
-					}
-				}
-
-				return {
-					...c,
-					current_card_description,
-					previous_card_description,
-					...(c.type == "card_modified"
-						? {
-								name_changed:
-									c.current_card_name != c.previous_card_name,
-								desc_changed:
-									c.current_card_description !=
-									c.previous_card_description,
-								img_changed:
-									c.current_card_image_url !=
-									c.previous_card_image_url,
-							}
-						: {}),
-				};
-			}),
-		[roadmapChanges.data],
-	);
 
 	return (
 		<>
@@ -326,178 +402,19 @@ function Roadmap() {
 					<p>No changes for this roadmap</p>
 				) : (
 					<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-						{roadmapChangesMapped.map((change) => {
-							if (change.type === "tab_added") {
-								return (
-									<div
-										key={change.id}
-										className="col-span-full"
-									>
-										Tab added: {change.tab_name}{" "}
-										<a
-											target="_blank"
-											referrerPolicy="no-referrer"
-											href={`${import.meta.env.VITE_ROADMAP_URL}/tabs/${change.tab_slug}`}
-										>
-											link
-										</a>
-									</div>
-								);
-							} else if (change.type === "tab_removed") {
-								return (
-									<div
-										key={change.id}
-										className="col-span-full"
-									>
-										Tab removed: {change.tab_name}
-									</div>
-								);
-							} else if (change.type === "card_added") {
-								return (
-									<div
-										key={change.id}
-										className="flex flex-col overflow-hidden rounded-sm border-2 border-green-700 pb-2 text-sm"
-									>
-										<div className="mb-2 aspect-video w-full">
-											{change.current_card_image_url && (
-												<img
-													className="h-full w-full object-cover"
-													loading="lazy"
-													src={
-														change.current_card_image_url
-													}
-												/>
-											)}
-										</div>
-										<h3 className="mb-2 px-2 text-xl">
-											{change.current_card_name}{" "}
-											<a
-												className="text-sm"
-												target="_blank"
-												referrerPolicy="no-referrer"
-												href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}
-											>
-												link
-											</a>
-										</h3>
-										<p className="mb-2 px-2">
-											{change.card_tab_name}
-										</p>
-										{change.current_card_description}
-									</div>
-								);
-							} else if (change.type === "card_removed") {
-								return (
-									<div
-										key={change.id}
-										className="flex flex-col overflow-hidden rounded-sm border-2 border-red-700 pb-2 text-sm"
-									>
-										{/* Image resource is removed with card it seems */}
-										{/* <div className="w-full aspect-video mb-2">{change.previous_card_image_url && <img className="w-full h-full object-cover" loading="lazy" src={change.previous_card_image_url} />}</div> */}
-										<h3 className="mb-2 px-2 pt-2 text-xl">
-											{change.previous_card_name}
-										</h3>
-										<p className="mb-2 px-2">
-											{change.card_tab_name}
-										</p>
-										{change.previous_card_description}
-									</div>
-								);
+						{roadmapChanges.data.map((change) => {
+							if (
+								change.type === "tab_added" ||
+								change.type === "tab_removed"
+							) {
+								return <TabChange change={change} key={change.id} />;
+							} else if (
+								change.type === "card_added" ||
+								change.type === "card_removed"
+							) {
+								return <CardChange change={change} key={change.id} />;
 							} else if (change.type === "card_modified") {
-								return (
-									<div
-										key={change.id}
-										className={`grid gap-4 overflow-hidden rounded-sm border-2 border-blue-700 pb-2 text-sm ${change.desc_changed ? "col-span-full grid-cols-2" : ""}`}
-									>
-										<div
-											className={`col-span-full aspect-video w-full ${change.img_changed ? "rounded-t border-2 border-green-400" : ""}`}
-										>
-											{change.current_card_image_url && (
-												<img
-													className="h-full w-full object-cover"
-													loading="lazy"
-													src={
-														change.current_card_image_url
-													}
-												/>
-											)}
-										</div>
-										<div className="col-span-full px-2">
-											<p>Tab: {change.card_tab_name}</p>
-										</div>
-
-										<div className="col-span-full">
-											<h3 className="px-2 text-xl">
-												{change.name_changed
-													? diffWordsWithSpace(
-															change.previous_card_name,
-															change.current_card_name,
-														).map((change) => {
-															if (change.added) {
-																return (
-																	<span
-																		key={
-																			change.value
-																		}
-																		className="text-green-400"
-																	>
-																		{
-																			change.value
-																		}
-																	</span>
-																);
-															} else if (
-																change.removed
-															) {
-																return (
-																	<span
-																		key={
-																			change.value
-																		}
-																		className="text-red-400"
-																	>
-																		{
-																			change.value
-																		}
-																	</span>
-																);
-															} else {
-																return (
-																	<span
-																		key={
-																			change.value
-																		}
-																	>
-																		{
-																			change.value
-																		}
-																	</span>
-																);
-															}
-														})
-													: change.current_card_name}{" "}
-												<a
-													className="text-sm"
-													target="_blank"
-													referrerPolicy="no-referrer"
-													href={`${import.meta.env.VITE_ROADMAP_URL}/c/${change.current_card_slug}`}
-												>
-													link
-												</a>
-											</h3>
-										</div>
-										{change.desc_changed && (
-											<div>
-												{
-													change.previous_card_description
-												}
-											</div>
-										)}
-										<div>
-											{change.current_card_description}
-										</div>
-									</div>
-								);
+								return <CardMod change={change} key={change.id} />;
 							}
 						})}
 					</div>
