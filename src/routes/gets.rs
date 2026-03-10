@@ -60,9 +60,35 @@ pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
 #[get("/activity")]
 pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
     let db = data.db.connect().unwrap();
+
     if is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
         match sources::get_activity(db, 35, 0).await {
+            Ok(activities) => {
+                info!("[Get Activity] Got activities successfully");
+                HttpResponse::Ok().json(activities)
+            }
+            Err(err) => {
+                error!("[Get Activity] Getting activities failed with err: {err}");
+                HttpResponse::InternalServerError().json(Failure {
+                    message: format!("Couldn't get activities. Err: {err}"),
+                })
+            }
+        }
+    } else {
+        error!("[Get Activity] Failed due to auth error");
+        return_password_error()
+    }
+}
+
+#[get("/activity/{source_id}")]
+pub async fn get_source_activity(path: web::Path<u32>, data: AppData, req: HttpRequest) -> impl Responder {
+    let db = data.db.connect().unwrap();
+    let source_id = path.into_inner();
+
+    if is_logged_in(&req, db.clone()).await {
+        info!("[Get Activity] Getting activities from db");
+        match sources::get_source_activity(db, 35, 0, source_id).await {
             Ok(activities) => {
                 info!("[Get Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)

@@ -1,20 +1,32 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useEffectEvent } from "react";
 import {
-	Link,
 	Outlet,
 	createFileRoute,
 	useNavigate,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useEffectEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import * as v from "valibot";
+import { DocListIcon, RSSIcon } from "@storybook/icons";
 
-export const Route = createFileRoute("/_layout")({
-	component: Layout,
+import { Link } from "@/components/buttons";
+
+export const Route = createFileRoute("/_app")({
+	component: RouteComponent,
+	validateSearch: v.object({
+		demo: v.optional(
+			v.pipe(
+				v.any(),
+				v.transform(() => true),
+			),
+		),
+	}),
 });
 
-function Layout() {
+function RouteComponent() {
 	const navigate = useNavigate();
 	const routerState = useRouterState();
+	const { demo } = Route.useSearch();
 
 	const loginQuery = useQuery<boolean>({
 		queryKey: ["loggedin"],
@@ -29,7 +41,8 @@ function Layout() {
 
 	useEffect(() => {
 		console.log(pathname());
-		if (!loginQuery.isFetching && !loginQuery.data) {
+
+		if (!loginQuery.isFetching && !loginQuery.data && !demo) {
 			navigate({
 				to: "/",
 				search: {
@@ -37,30 +50,23 @@ function Layout() {
 				},
 			});
 		}
-	}, [loginQuery.data, loginQuery.isFetching, navigate]);
+	}, [loginQuery.data, loginQuery.isFetching, demo, navigate]);
 
 	return (
 		<>
-			<header className="flex h-16 items-center bg-black px-6 text-white">
+			<header className="fixed top-6 right-6 flex items-center gap-4">
 				<Link
-					className="mr-4 hover:text-green-500 focus:text-green-500"
-					to="/sources"
-					activeOptions={{ exact: true }}
+					to="/rss/{-$sourceId}"
+					Icon={RSSIcon}
+					iconLabel="Link to RSS page"
 					activeProps={{ className: "font-bold" }}
 				>
-					Sources
+					RSS
 				</Link>
 				<Link
-					className="mr-4 hover:text-green-500 focus:text-green-500"
-					to="/activity"
-					activeOptions={{ exact: true }}
-					activeProps={{ className: "font-bold" }}
-				>
-					Activity
-				</Link>
-				<Link
-					className="hover:text-green-500 focus:text-green-500"
 					to="/roadmaps"
+					Icon={DocListIcon}
+					iconLabel="Link to Roadmap Page"
 					activeOptions={{ exact: true }}
 					activeProps={{ className: "font-bold" }}
 				>

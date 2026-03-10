@@ -37,4 +37,16 @@
 	input {
 		background-color: white;
 	}
+
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+
+	button:disabled {
+		cursor: not-allowed;
+	}
+}
+
+@theme {
+	--color-primary: var(--color-green-700);
 }

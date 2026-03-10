@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	createColumnHelper,
@@ -6,20 +6,20 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Fragment, useState } from "react";
+
 import TableGrid from "../components/table-grid";
 import { formatDate } from "../components/date";
+import type { TActivity } from "../query/types";
+import {
+	useActivity,
+	useClearActivities,
+	useRecheckRSS,
+} from "../query/activity";
 
 export const Route = createFileRoute("/_layout/activity")({
 	component: Activity,
 });
 
-type TActivity = {
-	id: string;
-	source_url: string;
-	post_url: string;
-	timestamp: string;
-};
 const columnHelper = createColumnHelper<TActivity>();
 const columns = [
 	columnHelper.accessor("id", {
@@ -68,25 +68,7 @@ function Activity() {
 	const [loading, setLoading] = useState(false);
 	const [num, setNum] = useState(0);
 
-	const queryClient = useQueryClient();
-	const activity = useQuery<TActivity[]>({
-		queryKey: ["activity"],
-		queryFn: () =>
-			fetch("/api/activity").then(async (res) => {
-				if (res.ok) {
-					return res.json();
-				} else {
-					let err;
-					try {
-						err = await res.json();
-					} catch {
-						err = "Non-json return from response";
-					}
-					console.log("Error fetching activities", err);
-					throw err;
-				}
-			}),
-	});
+	const activity = useActivity();
 
 	const table = useReactTable({
 		columns: columns,
@@ -94,25 +76,9 @@ function Activity() {
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	const recheck = useMutation({
-		mutationFn: () =>
-			fetch("/api/recheck", {
-				method: "POST",
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["activity"] });
-		},
-	});
+	const recheck = useRecheckRSS();
 
-	const clearActivities = useMutation({
-		mutationFn: (num: number) =>
-			fetch(`/api/activity${num < 1 ? "" : `/${num}`}`, {
-				method: "DELETE",
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["activity"] });
-		},
-	});
+	const clearActivities = useClearActivities();
 
 	return (
 		<>

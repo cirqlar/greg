@@ -1,5 +1,4 @@
 import { Fragment, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	createColumnHelper,
@@ -11,81 +10,30 @@ import TableGrid from "../components/table-grid";
 
 import style from "../components/table-grid.module.css";
 import { formatDate } from "../components/date";
+import type { TSource } from "../query/types";
+import {
+	useAddSource,
+	useDeleteSource,
+	useEnableSource,
+	useSources,
+} from "../query/sources";
 
 export const Route = createFileRoute("/_layout/sources")({
 	component: Sources,
 });
 
-type TSource = {
-	id: number;
-	url: string;
-	last_checked: string;
-	enabled: boolean;
-};
 const columnHelper = createColumnHelper<TSource>();
 
 function Sources() {
 	const [loading, setLoading] = useState(false);
 
 	const [url, setUrl] = useState("");
-	const queryClient = useQueryClient();
-	const sources = useQuery<TSource[]>({
-		queryKey: ["sources"],
-		queryFn: () =>
-			fetch("/api/sources").then(async (res) => {
-				if (res.ok) {
-					return res.json();
-				} else {
-					let err;
-					try {
-						err = await res.json();
-					} catch {
-						err = "Non-json return from response";
-					}
-					console.log("Error fetching sources", err);
-					throw err;
-				}
-			}),
-	});
 
-	const addSource = useMutation({
-		mutationFn: (source: { url: string }) =>
-			fetch("/api/source/new", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(source),
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["sources"] });
-		},
-	});
-
-	const { mutateAsync: enableSourceAsync } = useMutation({
-		mutationFn: ({ id, enable }: { id: number; enable: boolean }) =>
-			fetch(`/api/source/${id}/enable/${enable}`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				// body: JSON.stringify(source),
-			}).then((res) => res.json()),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["sources"] });
-		},
-	});
-
+	const sources = useSources();
+	const addSource = useAddSource();
+	const { mutateAsync: enableSourceAsync } = useEnableSource();
 	const { mutateAsync: deleteSourceAsync, isPending: deleteSourceIsPending } =
-		useMutation({
-			mutationFn: (id: number) =>
-				fetch(`/api/source/${id}`, {
-					method: "DELETE",
-				}).then((res) => res.json()),
-			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["sources"] });
-			},
-		});
+		useDeleteSource();
 
 	const columns = useMemo(
 		() => [

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { diffWordsWithSpace } from "diff";
-import { useMemo, ReactNode, Fragment } from "react";
+import { useMemo, type ReactNode, Fragment } from "react";
 
 export const Route = createFileRoute("/_layout/roadmap/$roadmap_id")({
 	component: Roadmap,

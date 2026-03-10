@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/oxfmt/configuration_schema.json",
 	"sortTailwindcss": {
 		"stylesheet": "./src/index.css",
-		"functions": ["tw"]
+		"functions": ["tw", "clsx"]
 	},
 	"printWidth": 80,
 	"ignorePatterns": [

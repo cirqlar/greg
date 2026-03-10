@@ -27,7 +27,7 @@ function Index() {
 	const [error, setError] = useState("");
 
 	const submit = useCallback(
-		async (e: React.FormEvent) => {
+		async (e: React.SubmitEvent) => {
 			e.preventDefault();
 			setLoading(true);
 

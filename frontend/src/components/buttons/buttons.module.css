@@ -1,0 +1,110 @@
+@property --conic-grad-start {
+	syntax: "<angle>";
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@property --arc-width {
+	syntax: "<angle>";
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@property --bg-color {
+	syntax: "<color>";
+	inherits: false;
+	initial-value: white;
+}
+
+@property --border-color {
+	syntax: "<color>";
+	inherits: false;
+	initial-value: white;
+}
+
+@keyframes rotate {
+	from {
+		--conic-grad-start: 0deg;
+	}
+	to {
+		--conic-grad-start: 360deg;
+	}
+}
+
+@layer components {
+	.button {
+		position: relative;
+
+		display: flex;
+		align-items: center;
+		gap: calc(var(--spacing) * 2);
+
+		color: var(--color-white);
+		border-radius: 100vw;
+		background-color: color-mix(
+			in oklab,
+			var(--color-white) 30%,
+			transparent
+		);
+
+		> .icon {
+			--border: calc(var(--spacing) * 1);
+			--bg-color: var(--color-white);
+			--border-color: var(--color-black);
+
+			--conic-grad-start: 0deg;
+			--arc-width: 0deg;
+			--arc-end: 360deg;
+
+			padding: calc(var(--spacing) * 4 - var(--border));
+			color: var(--color-black);
+
+			border-radius: 100vw;
+			border: var(--border) solid transparent;
+			background:
+				padding-box radial-gradient(var(--bg-color), var(--bg-color)),
+				border-box
+					conic-gradient(
+						from var(--conic-grad-start),
+						transparent calc(var(--arc-end) - var(--arc-width)),
+						var(--border-color)
+							calc(var(--arc-end) - var(--arc-width)),
+						var(--border-color) calc(var(--arc-end)),
+						transparent calc(var(--arc-end))
+					),
+				border-box radial-gradient(var(--bg-color), var(--bg-color));
+
+			transition:
+				--arc-width 0.5s ease-in-out,
+				--bg-color 0.5s ease-in-out,
+				--border-color 0.5s ease-in-out,
+				all 0.5s ease-in-out;
+		}
+
+		&[data-status="active"] {
+			color: var(--color-green-400);
+		}
+
+		&[data-status="active"] > .icon {
+			color: var(--color-green-600);
+		}
+
+		&:disabled > .icon {
+			color: var(--color-gray-800);
+			--bg-color: var(--color-gray-400);
+		}
+
+		&[data-border="true"] > .icon {
+			--arc-width: 75deg;
+		}
+
+		&[data-animate="true"] > .icon {
+			animation: rotate 1s linear infinite forwards;
+		}
+
+		&[data-error="true"] > .icon {
+			--border-color: var(--color-red-700);
+			--arc-width: 360deg;
+		}
+	}
+}
