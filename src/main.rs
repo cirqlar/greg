@@ -5,13 +5,17 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
+use anyhow::Ok;
 use dotenvy::dotenv;
 use greg::{
     db,
     routes::{
-        deletes::{clear_activities, clear_all_activities, delete_source, delete_watched_tab},
+        deletes::{
+            clear_activities, clear_all_activities, delete_source, delete_watched_tab, logout,
+        },
         gets::{
-            check_logged_in, get_activity, get_changes, get_most_recent_tabs, get_roadmap_activity, get_source_activity, get_sources, get_watched_tabs, keep_alive
+            check_logged_in, get_activity, get_changes, get_most_recent_tabs, get_roadmap_activity,
+            get_source_activity, get_sources, get_watched_tabs, keep_alive,
         },
         posts::{add_source, add_watched_tab, enable_source, login, recheck, recheck_roadmap},
     },
@@ -26,19 +30,29 @@ use greg::tasks::check_sources::check_sources;
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{Job, JobScheduler};
 
+async fn do_db_migrate(database: &libsql::Database, name: &str) -> anyhow::Result<()> {
+    info!("Connecting to {name} Database");
+    let conn = database.connect().expect("Can connect to database");
+
+    info!("Connected to Database. Migrating");
+    db::migrate_db(conn).await?;
+
+    info!("Migrated Database");
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let db = db::get_database().await;
-    info!("Connecting to Database");
-    let conn = db.connect().unwrap().clone();
-    info!("Connected to Database. Migrating");
-    db::migrate_db(conn).await?;
-    info!("Migrated Database");
+    let app_db = db::get_database().await;
+    do_db_migrate(&app_db, "app").await?;
 
-    let app_data = web::Data::new(AppState { db });
+    let demo_db = db::get_demo_database().await;
+    do_db_migrate(&demo_db, "app").await?;
+
+    let app_data = web::Data::new(AppState { app_db, demo_db });
 
     #[cfg(feature = "scheduler")]
     {
@@ -99,7 +113,8 @@ async fn main() -> anyhow::Result<()> {
                     .service(delete_watched_tab)
                     .service(get_changes)
                     .service(enable_source)
-                    .service(get_source_activity),
+                    .service(get_source_activity)
+                    .service(logout),
             )
             .service(
                 spa()

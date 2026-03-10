@@ -331,7 +331,8 @@ pub struct Failure {
 }
 
 pub struct AppState {
-    pub db: Database,
+    pub app_db: Database,
+    pub demo_db: Database,
 }
 
 pub type AppData = web::Data<AppState>;

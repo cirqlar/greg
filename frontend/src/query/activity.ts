@@ -3,13 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TActivity } from "./types";
 import { handleFetchResponse } from "./util";
 
-export function useActivity(sourceId?: number) {
+export function useActivity(sourceId?: number, demo?: boolean) {
 	return useQuery<TActivity[]>({
-		queryKey: ["activity", sourceId],
+		queryKey: [demo ?? false, "activity", sourceId],
 		queryFn: () =>
-			fetch("/api/activity" + (sourceId ? `/${sourceId}` : "")).then(
-				handleFetchResponse("Error fetching activities"),
-			),
+			fetch(
+				"/api/activity" +
+					(sourceId ? `/${sourceId}` : "") +
+					(demo ? "?demo=true" : ""),
+			).then(handleFetchResponse("Error fetching activities")),
 	});
 }
 

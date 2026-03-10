@@ -101,13 +101,23 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				data-border={showBorder}
 				data-animate={animating}
 				data-error={btn.error}
+				data-icononly={!props.children}
 				className={clsx(
 					props.className,
 					props.children && "pl-4",
 					styles.button,
 				)}
 			>
-				{copied_props.children}
+				{copied_props.children && (
+					<span
+						className={clsx(
+							"flex-1 text-center",
+							icon.size === "small" && "text-sm",
+						)}
+					>
+						{copied_props.children}
+					</span>
+				)}
 				<div
 					className={clsx(
 						styles.icon,
@@ -139,13 +149,23 @@ const InternalLink = React.forwardRef<HTMLAnchorElement, InternalLinkProps>(
 				data-border={showBorder}
 				data-animate={animating}
 				data-error={btn.error}
+				data-icononly={!props.children}
 				className={clsx(
 					styles.button,
 					props.className,
 					props.children && "pl-4",
 				)}
 			>
-				{copied_props.children}
+				{copied_props.children && (
+					<span
+						className={clsx(
+							"flex-1 text-center",
+							icon.size === "small" && "text-sm",
+						)}
+					>
+						{copied_props.children}
+					</span>
+				)}
 				<div
 					className={clsx(
 						styles.icon,
@@ -160,3 +180,9 @@ const InternalLink = React.forwardRef<HTMLAnchorElement, InternalLinkProps>(
 );
 
 export const Link = createLink(InternalLink);
+
+export const ExternalLink = (props: ComponentProps<typeof InternalLink>) => {
+	return (
+		<InternalLink {...props} target="_blank" referrerPolicy="no-referrer" />
+	);
+};

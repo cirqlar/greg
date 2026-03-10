@@ -3,11 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TSource } from "./types";
 import { handleFetchResponse } from "./util";
 
-export function useSources() {
+export function useSources(demo?: boolean) {
 	return useQuery<TSource[]>({
-		queryKey: ["sources"],
+		queryKey: [demo ?? false, "sources"],
 		queryFn: () =>
-			fetch("/api/sources").then(
+			fetch(`/api/sources${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching sources"),
 			),
 	});

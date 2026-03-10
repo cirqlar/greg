@@ -471,7 +471,7 @@ pub async fn check_roadmap(data: &AppData) {
 
     let start_time = OffsetDateTime::now_utc();
 
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     // Get Watched Tabs
     let watched_tabs_result = get_watched_tabs(db.clone()).await;
     let Ok(watched_tabs) = watched_tabs_result else {
@@ -548,7 +548,7 @@ pub async fn check_roadmap(data: &AppData) {
         }
 
         // Save Roadmap
-        let db = data.db.connect();
+        let db = data.app_db.connect();
         let Ok(db) = db else {
             error!("[Check Roadmap] DB failed to connect {}", db.unwrap_err());
             return;
@@ -856,7 +856,7 @@ pub async fn check_roadmap(data: &AppData) {
             }
         }
     } else {
-        let db = data.db.connect();
+        let db = data.app_db.connect();
         let Ok(db) = db else {
             error!("[Check Roadmap] DB failed to connect {}", db.unwrap_err());
             return;

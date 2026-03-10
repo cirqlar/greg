@@ -11,11 +11,18 @@ use crate::{
 
 use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, get, web};
 use log::{error, info};
+use serde::Deserialize;
 use serde_json::json;
+
+#[derive(Debug, Deserialize)]
+struct Query {
+    #[serde(default)]
+    demo: bool,
+}
 
 #[get("/check-logged-in")]
 pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     let logged_in = is_logged_in(&req, db).await;
     let mut res = HttpResponse::Ok();
     if !logged_in {
@@ -35,9 +42,18 @@ pub async fn keep_alive() -> impl Responder {
 }
 
 #[get("/sources")]
-pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await {
+pub async fn get_sources(
+    data: AppData,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
+
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Sources] Getting sources from db");
         match sources::get_sources(db).await {
             Ok(sources) => {
@@ -58,10 +74,18 @@ pub async fn get_sources(data: AppData, req: HttpRequest) -> impl Responder {
 }
 
 #[get("/activity")]
-pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+pub async fn get_activity(
+    data: AppData,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
 
-    if is_logged_in(&req, db.clone()).await {
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
         match sources::get_activity(db, 35, 0).await {
             Ok(activities) => {
@@ -82,11 +106,20 @@ pub async fn get_activity(data: AppData, req: HttpRequest) -> impl Responder {
 }
 
 #[get("/activity/{source_id}")]
-pub async fn get_source_activity(path: web::Path<u32>, data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+pub async fn get_source_activity(
+    data: AppData,
+    path: web::Path<u32>,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
     let source_id = path.into_inner();
 
-    if is_logged_in(&req, db.clone()).await {
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
         match sources::get_source_activity(db, 35, 0, source_id).await {
             Ok(activities) => {
@@ -107,9 +140,18 @@ pub async fn get_source_activity(path: web::Path<u32>, data: AppData, req: HttpR
 }
 
 #[get("/roadmap_activity")]
-pub async fn get_roadmap_activity(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await {
+pub async fn get_roadmap_activity(
+    data: AppData,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
+
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Roadmap Activity] Getting activities from db");
 
         match get_roadmap_activities(db, 35, 0).await {
@@ -118,9 +160,7 @@ pub async fn get_roadmap_activity(data: AppData, req: HttpRequest) -> impl Respo
                 HttpResponse::Ok().json(activities)
             }
             Err(err) => {
-                error!(
-                    "[Get Roadmap Activity] Getting roadmap activities failed with err: {err}"
-                );
+                error!("[Get Roadmap Activity] Getting roadmap activities failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't get roadmap activities. Err: {err}"),
                 })
@@ -133,9 +173,17 @@ pub async fn get_roadmap_activity(data: AppData, req: HttpRequest) -> impl Respo
 }
 
 #[get("/most_recent_tabs")]
-pub async fn get_most_recent_tabs(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await {
+pub async fn get_most_recent_tabs(
+    data: AppData,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Roadmap Tabs] Getting most recent tabs from db");
 
         match get_most_recent_roadmap_tabs(db).await {
@@ -144,9 +192,7 @@ pub async fn get_most_recent_tabs(data: AppData, req: HttpRequest) -> impl Respo
                 HttpResponse::Ok().json(tabs)
             }
             Err(err) => {
-                error!(
-                    "[Get Roadmap Tabs] Getting roadmap tabs failed with err: {err}"
-                );
+                error!("[Get Roadmap Tabs] Getting roadmap tabs failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't get roadmap tabs. Err: {err}"),
                 })
@@ -159,9 +205,17 @@ pub async fn get_most_recent_tabs(data: AppData, req: HttpRequest) -> impl Respo
 }
 
 #[get("/watched_tabs")]
-pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await {
+pub async fn get_watched_tabs(
+    data: AppData,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Watched Tabs] Getting watched tabs from db");
 
         match roadmap::get_watched_tabs(db).await {
@@ -170,9 +224,7 @@ pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder
                 HttpResponse::Ok().json(watched_tabs)
             }
             Err(err) => {
-                error!(
-                    "[Get Watched Tabs] Getting watched tabs failed with err: {err}"
-                );
+                error!("[Get Watched Tabs] Getting watched tabs failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't get watched tabs. Err: {err}"),
                 })
@@ -185,11 +237,21 @@ pub async fn get_watched_tabs(data: AppData, req: HttpRequest) -> impl Responder
 }
 
 #[get("/roadmap_activity/{id}")]
-pub async fn get_changes(path: web::Path<u32>, data: AppData, req: HttpRequest) -> impl Responder {
+pub async fn get_changes(
+    data: AppData,
+    path: web::Path<u32>,
+    query: web::Query<Query>,
+    req: HttpRequest,
+) -> impl Responder {
     let activity_id = path.into_inner();
 
-    let db = data.db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await {
+    let db = if query.demo {
+        data.demo_db.connect().unwrap()
+    } else {
+        data.app_db.connect().unwrap()
+    };
+
+    if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Roadmap Changes] Getting changes from db");
 
         match get_roadmap_changes(db, activity_id).await {
@@ -198,9 +260,7 @@ pub async fn get_changes(path: web::Path<u32>, data: AppData, req: HttpRequest) 
                 HttpResponse::Ok().json(changes)
             }
             Err(err) => {
-                error!(
-                    "[Get Roadmap Changes] Getting roadmap changes failed with err: {err}"
-                );
+                error!("[Get Roadmap Changes] Getting roadmap changes failed with err: {err}");
                 HttpResponse::InternalServerError().json(Failure {
                     message: format!("Couldn't get roadmap changes. Err: {err}"),
                 })
