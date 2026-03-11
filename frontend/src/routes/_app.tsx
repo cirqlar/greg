@@ -80,6 +80,7 @@ function RouteComponent() {
 					iconLabel="Logout"
 					disabled={loggingOut}
 					animate={loggingOut}
+					theme="red"
 					onClick={async () => {
 						setLoggingOut(true);
 						updateProcessing(true);

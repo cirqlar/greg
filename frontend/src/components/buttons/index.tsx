@@ -15,12 +15,13 @@ import styles from "./buttons.module.css";
 type IconProps = {
 	Icon: ComponentType<ComponentProps<typeof PlusIcon>>;
 	iconLabel: string;
-	size?: "big" | "small";
 };
 
 type BtnProps = {
 	animate?: boolean;
 	error?: boolean;
+	size?: "big" | "small";
+	theme?: "green" | "red" | "none";
 };
 
 type OmitProps = "style" | "aria-label";
@@ -67,18 +68,20 @@ function useButtonProps<T>(props: CustomButtonProps<T>) {
 		let icon = {
 			Icon: props.Icon,
 			iconLabel: props.iconLabel,
-			size: props.size,
 		};
 		let btn = {
 			animate: props.animate,
 			error: props.error,
+			size: props.size,
+			theme: props.theme ?? "none",
 		};
 
 		delete copied.Icon;
 		delete copied.iconLabel;
-		delete copied.size;
 		delete copied.animate;
 		delete copied.error;
+		delete copied.size;
+		delete copied.theme;
 
 		return { copied_props: copied as T, icon, btn };
 	}, [props]);
@@ -101,10 +104,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				data-border={showBorder}
 				data-animate={animating}
 				data-error={btn.error}
-				data-icononly={!props.children}
+				data-icononly={!copied_props.children}
+				data-theme={btn.theme}
+				data-invert={!copied_props.children && btn.theme !== "none"}
 				className={clsx(
-					props.className,
-					props.children && "pl-4",
+					copied_props.className,
+					copied_props.children && "pl-4",
 					styles.button,
 				)}
 			>
@@ -112,19 +117,16 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 					<span
 						className={clsx(
 							"flex-1 text-center",
-							icon.size === "small" && "text-sm",
+							btn.size === "small" && "text-sm",
 						)}
 					>
 						{copied_props.children}
 					</span>
 				)}
 				<div
-					className={clsx(
-						styles.icon,
-						icon.size === "small" && "p-2",
-					)}
+					className={clsx(styles.icon, btn.size === "small" && "p-2")}
 				>
-					<icon.Icon size={icon.size === "small" ? 12 : 16} />
+					<icon.Icon size={btn.size === "small" ? 12 : 16} />
 				</div>
 			</button>
 		);
@@ -149,30 +151,29 @@ const InternalLink = React.forwardRef<HTMLAnchorElement, InternalLinkProps>(
 				data-border={showBorder}
 				data-animate={animating}
 				data-error={btn.error}
-				data-icononly={!props.children}
+				data-icononly={!copied_props.children}
+				data-theme={btn.theme}
+				data-invert={!copied_props.children && btn.theme !== "none"}
 				className={clsx(
 					styles.button,
-					props.className,
-					props.children && "pl-4",
+					copied_props.className,
+					copied_props.children && "pl-4",
 				)}
 			>
 				{copied_props.children && (
 					<span
 						className={clsx(
 							"flex-1 text-center",
-							icon.size === "small" && "text-sm",
+							btn.size === "small" && "text-sm",
 						)}
 					>
 						{copied_props.children}
 					</span>
 				)}
 				<div
-					className={clsx(
-						styles.icon,
-						icon.size === "small" && "p-2",
-					)}
+					className={clsx(styles.icon, btn.size === "small" && "p-2")}
 				>
-					<icon.Icon size={icon.size === "small" ? 12 : 16} />
+					<icon.Icon size={btn.size === "small" ? 12 : 16} />
 				</div>
 			</a>
 		);

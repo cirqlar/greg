@@ -211,6 +211,7 @@ function Source({ source }: { source?: TSource }) {
 							disabled={demo || processing}
 							animate={enableSource.isPending}
 							error={enableSource.isError}
+							theme={source.enabled ? "red" : "green"}
 							size="small"
 							onClick={async () => {
 								if (processing) return;
@@ -235,6 +236,7 @@ function Source({ source }: { source?: TSource }) {
 							disabled={demo || processing}
 							animate={deleteSource.isPending}
 							error={deleteSource.isError}
+							theme="red"
 							size="small"
 							onClick={async () => {
 								if (processing) return;
