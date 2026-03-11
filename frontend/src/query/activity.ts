@@ -5,7 +5,7 @@ import { handleFetchResponse } from "./util";
 
 export function useActivity(sourceId?: number, demo?: boolean) {
 	return useQuery<TActivity[]>({
-		queryKey: [demo ?? false, "activity", sourceId],
+		queryKey: ["activity", sourceId, demo ?? false],
 		queryFn: () =>
 			fetch(
 				"/api/activity" +
