@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { TRoadmapActivity, TRTab, TWatchedTab } from "./types";
+import type {
+	TRoadmapActivity,
+	TRoadmapChange,
+	TRTab,
+	TWatchedTab,
+} from "./types";
 import { handleFetchResponse } from "./util";
 
 export function useRoadmapActivity(demo?: boolean) {
@@ -30,6 +35,16 @@ export function useRoadmapWatchedTabs(demo?: boolean) {
 			fetch(`/api/watched_tabs${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching watched tabs"),
 			),
+	});
+}
+
+export function useRoadmapChanges(roadmapId: number, demo?: boolean) {
+	return useQuery<TRoadmapChange[]>({
+		queryKey: ["roadmap", roadmapId, demo ?? false],
+		queryFn: () =>
+			fetch(
+				`/api/roadmap_activity/${roadmapId}${demo ? "?demo=true" : ""}`,
+			).then(handleFetchResponse("Error fetching changes")),
 	});
 }
 

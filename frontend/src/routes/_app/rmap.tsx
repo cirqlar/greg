@@ -1,6 +1,17 @@
+import { useMemo } from "react";
+
 import clsx from "clsx";
+import {
+	CheckIcon,
+	CrossIcon,
+	EyeIcon,
+	LinkIcon,
+	RefreshIcon,
+} from "@storybook/icons";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { Button, ExternalLink, Link } from "@/components/buttons";
+import { formatDate } from "@/components/date";
 import {
 	useRoadmapActivity,
 	useRoadmapTabs,
@@ -8,12 +19,9 @@ import {
 	useUnwatchTabMutation,
 	useWatchTabMutation,
 } from "@/query/roadmap";
-import type { TRTab, TWatchedTab } from "@/query/types";
-import { Button, ExternalLink } from "@/components/buttons";
-import { CheckIcon, CrossIcon, LinkIcon, RefreshIcon } from "@storybook/icons";
-import { updateProcessing, useProcessing } from "@/stores/processing";
-import { useMemo } from "react";
 import { useRecheckRSS } from "@/query/activity";
+import type { TRTab, TWatchedTab } from "@/query/types";
+import { updateProcessing, useProcessing } from "@/stores/processing";
 
 export const Route = createFileRoute("/_app/rmap")({
 	component: RouteComponent,
@@ -168,7 +176,7 @@ function TabList() {
 	}
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="grid w-full grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-2 lg:flex lg:flex-col">
 			{processedTabs.map((tab) => (
 				<Tab tab={tab} key={tab.name} />
 			))}
@@ -211,9 +219,29 @@ function ChangeList() {
 
 	return (
 		<div className="h-full rounded-lg bg-white/20 p-4">
-			<div className="max-h-full overflow-y-auto">
+			<div className="flex max-h-full flex-col gap-2 overflow-y-auto">
 				{roadmapActivity.map((activity) => (
-					<p key={activity.id}>{activity.id}</p>
+					<div
+						key={activity.id}
+						className="flex items-center justify-between not-last:border-b-2 not-last:border-white/20 not-last:pb-2"
+					>
+						<p className="w-40">{formatDate(activity.timestamp)}</p>
+						<p className="w-24">
+							{activity.change_count ?? 0}{" "}
+							{activity.change_count === 1 ? "Change" : "Changes"}
+						</p>
+
+						<Link
+							to="/rmap/$roadmapId"
+							params={{ roadmapId: activity.id }}
+							search={(prev) => prev}
+							iconLabel="View Changes"
+							Icon={EyeIcon}
+							size="small"
+						>
+							View
+						</Link>
+					</div>
 				))}
 			</div>
 		</div>
@@ -228,7 +256,7 @@ function RefreshRoadmap() {
 	const refresh = useRecheckRSS();
 
 	return (
-		<div className="flex flex-col gap-2 px-5">
+		<div className="mx-auto flex w-90 flex-col gap-2 px-5">
 			<Button
 				Icon={RefreshIcon}
 				iconLabel="Refresh Roadmap"
@@ -255,13 +283,13 @@ function RefreshRoadmap() {
 
 function RouteComponent() {
 	return (
-		<div className="relative flex h-full max-h-full justify-center px-4 pt-24">
-			<div className="flex max-h-full w-90 flex-none flex-col gap-6 overflow-y-auto py-4">
+		<div className="relative flex flex-col items-center gap-6 pt-24 lg:h-full lg:max-h-full lg:flex-row lg:items-start lg:justify-center lg:gap-0 lg:px-4">
+			<div className="flex w-full flex-none flex-col gap-6 overflow-y-auto py-4 lg:max-h-full lg:w-90">
 				<RefreshRoadmap />
 				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
 				<TabList />
 			</div>
-			<div className="ml-6 h-full w-full overflow-auto py-4">
+			<div className="h-full w-full overflow-auto px-4 py-4 lg:ml-6 lg:px-0">
 				<ChangeList />
 			</div>
 		</div>

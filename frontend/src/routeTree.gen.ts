@@ -15,9 +15,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutSourcesRouteImport } from './routes/_layout.sources'
 import { Route as LayoutRoadmapsRouteImport } from './routes/_layout.roadmaps'
 import { Route as LayoutActivityRouteImport } from './routes/_layout.activity'
-import { Route as AppRmapRouteRouteImport } from './routes/_app/rmap/route'
+import { Route as AppRmapRouteImport } from './routes/_app/rmap'
 import { Route as LayoutRoadmapRoadmap_idRouteImport } from './routes/_layout.roadmap.$roadmap_id'
 import { Route as AppRssChar123SourceIdChar125RouteImport } from './routes/_app/rss/{-$sourceId}'
+import { Route as AppRmapRoadmapIdRouteImport } from './routes/_app/rmap_.$roadmapId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -47,7 +48,7 @@ const LayoutActivityRoute = LayoutActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => LayoutRoute,
 } as any)
-const AppRmapRouteRoute = AppRmapRouteRouteImport.update({
+const AppRmapRoute = AppRmapRouteImport.update({
   id: '/rmap',
   path: '/rmap',
   getParentRoute: () => AppRoute,
@@ -63,22 +64,29 @@ const AppRssChar123SourceIdChar125Route =
     path: '/rss/{-$sourceId}',
     getParentRoute: () => AppRoute,
   } as any)
+const AppRmapRoadmapIdRoute = AppRmapRoadmapIdRouteImport.update({
+  id: '/rmap_/$roadmapId',
+  path: '/rmap/$roadmapId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/rmap': typeof AppRmapRouteRoute
+  '/rmap': typeof AppRmapRoute
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/rmap/$roadmapId': typeof AppRmapRoadmapIdRoute
   '/rss/{-$sourceId}': typeof AppRssChar123SourceIdChar125Route
   '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/rmap': typeof AppRmapRouteRoute
+  '/rmap': typeof AppRmapRoute
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/rmap/$roadmapId': typeof AppRmapRoadmapIdRoute
   '/rss/{-$sourceId}': typeof AppRssChar123SourceIdChar125Route
   '/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
@@ -87,10 +95,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_layout': typeof LayoutRouteWithChildren
-  '/_app/rmap': typeof AppRmapRouteRoute
+  '/_app/rmap': typeof AppRmapRoute
   '/_layout/activity': typeof LayoutActivityRoute
   '/_layout/roadmaps': typeof LayoutRoadmapsRoute
   '/_layout/sources': typeof LayoutSourcesRoute
+  '/_app/rmap_/$roadmapId': typeof AppRmapRoadmapIdRoute
   '/_app/rss/{-$sourceId}': typeof AppRssChar123SourceIdChar125Route
   '/_layout/roadmap/$roadmap_id': typeof LayoutRoadmapRoadmap_idRoute
 }
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/roadmaps'
     | '/sources'
+    | '/rmap/$roadmapId'
     | '/rss/{-$sourceId}'
     | '/roadmap/$roadmap_id'
   fileRoutesByTo: FileRoutesByTo
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/roadmaps'
     | '/sources'
+    | '/rmap/$roadmapId'
     | '/rss/{-$sourceId}'
     | '/roadmap/$roadmap_id'
   id:
@@ -122,6 +133,7 @@ export interface FileRouteTypes {
     | '/_layout/activity'
     | '/_layout/roadmaps'
     | '/_layout/sources'
+    | '/_app/rmap_/$roadmapId'
     | '/_app/rss/{-$sourceId}'
     | '/_layout/roadmap/$roadmap_id'
   fileRoutesById: FileRoutesById
@@ -180,7 +192,7 @@ declare module '@tanstack/react-router' {
       id: '/_app/rmap'
       path: '/rmap'
       fullPath: '/rmap'
-      preLoaderRoute: typeof AppRmapRouteRouteImport
+      preLoaderRoute: typeof AppRmapRouteImport
       parentRoute: typeof AppRoute
     }
     '/_layout/roadmap/$roadmap_id': {
@@ -197,16 +209,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRssChar123SourceIdChar125RouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/rmap_/$roadmapId': {
+      id: '/_app/rmap_/$roadmapId'
+      path: '/rmap/$roadmapId'
+      fullPath: '/rmap/$roadmapId'
+      preLoaderRoute: typeof AppRmapRoadmapIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
-  AppRmapRouteRoute: typeof AppRmapRouteRoute
+  AppRmapRoute: typeof AppRmapRoute
+  AppRmapRoadmapIdRoute: typeof AppRmapRoadmapIdRoute
   AppRssChar123SourceIdChar125Route: typeof AppRssChar123SourceIdChar125Route
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppRmapRouteRoute: AppRmapRouteRoute,
+  AppRmapRoute: AppRmapRoute,
+  AppRmapRoadmapIdRoute: AppRmapRoadmapIdRoute,
   AppRssChar123SourceIdChar125Route: AppRssChar123SourceIdChar125Route,
 }
 

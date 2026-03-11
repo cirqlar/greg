@@ -40,6 +40,7 @@ pub struct Activity {
 #[derive(Serialize, Deserialize)]
 pub struct RoadmapActivity {
     pub id: u32,
+    pub change_count: Option<u32>,
     #[serde(
         deserialize_with = "deserialize_timestamp",
         serialize_with = "serialize_timestamp"
