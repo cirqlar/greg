@@ -23,7 +23,7 @@ import {
 import type { TRTab, TWatchedTab } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
 
-export const Route = createFileRoute("/_app/rmap")({
+export const Route = createFileRoute("/_app/roadmap")({
 	component: RouteComponent,
 });
 
@@ -232,7 +232,7 @@ function ChangeList() {
 						</p>
 
 						<Link
-							to="/rmap/$roadmapId"
+							to="/roadmap/$roadmapId"
 							params={{ roadmapId: activity.id }}
 							search={(prev) => prev}
 							iconLabel="View Changes"

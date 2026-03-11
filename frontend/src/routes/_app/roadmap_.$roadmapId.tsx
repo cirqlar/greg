@@ -4,7 +4,7 @@ import * as v from "valibot";
 import { CardChange, CardMod, TabChange } from "@/components/roadmap";
 import { useRoadmapChanges } from "@/query/roadmap";
 
-export const Route = createFileRoute("/_app/rmap_/$roadmapId")({
+export const Route = createFileRoute("/_app/roadmap_/$roadmapId")({
 	component: RouteComponent,
 	params: {
 		parse: (rawParams) =>
@@ -37,7 +37,7 @@ function ChangeGrid() {
 			<div className="">
 				<p>Loading</p>
 			</div>
-		);
+		)
 	}
 
 	if (error || !roadmapChanges) {
@@ -45,7 +45,7 @@ function ChangeGrid() {
 			<div className="">
 				<p>Error loading changes</p>
 			</div>
-		);
+		)
 	}
 
 	if (roadmapChanges.length === 0) {
@@ -53,7 +53,7 @@ function ChangeGrid() {
 			<div className="">
 				<p>No changes</p>
 			</div>
-		);
+		)
 	}
 
 	return (
@@ -77,7 +77,7 @@ function ChangeGrid() {
 				})}
 			</div>
 		</div>
-	);
+	)
 }
 
 function RouteComponent() {
@@ -85,5 +85,5 @@ function RouteComponent() {
 		<div className="relative flex justify-center px-4 pt-24 pb-8">
 			<ChangeGrid />
 		</div>
-	);
+	)
 }
