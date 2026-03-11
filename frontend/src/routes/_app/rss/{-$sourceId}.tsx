@@ -4,8 +4,10 @@ import clsx from "clsx";
 import {
 	CheckIcon,
 	CrossIcon,
+	DeleteIcon,
 	LinkIcon,
 	PlusIcon,
+	RefreshIcon,
 	TrashIcon,
 } from "@storybook/icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -18,9 +20,10 @@ import {
 	useDeleteSource,
 	useSources,
 } from "@/query/sources";
-import { useActivity } from "@/query/activity";
+import { useActivity, useClearActivity, useRefreshRSS } from "@/query/activity";
 import type { TSource } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
+import { formatDate } from "@/components/date";
 
 export const Route = createFileRoute("/_app/rss/{-$sourceId}")({
 	component: RouteComponent,
@@ -62,7 +65,7 @@ function AddSource() {
 	const loading = addSource.isPending || processing;
 
 	return (
-		<div className="flex flex-col gap-2 px-5">
+		<div className="mx-auto flex w-90 flex-col gap-2 px-5">
 			<h3 className="mb-2 text-xl font-bold">Add Source</h3>
 			<form
 				onSubmit={async (e) => {
@@ -122,6 +125,104 @@ function AddSource() {
 	);
 }
 
+function ClearActivity() {
+	const { demo } = Route.useSearch();
+
+	const clearActivity = useClearActivity();
+
+	const processing = useProcessing((state) => state.processing);
+	const [num, setNum] = useState(0);
+	const [error, setError] = useState<string>();
+
+	const loading = clearActivity.isPending || processing;
+
+	return (
+		<div className="mx-auto flex w-90 flex-col gap-2 px-5">
+			<h3 className="mb-2 text-xl font-bold">Clear Activity</h3>
+			<form
+				onSubmit={async (e) => {
+					e.preventDefault();
+
+					if (loading) return;
+
+					setError(undefined);
+					updateProcessing(true);
+					try {
+						await clearActivity.mutateAsync(num);
+					} catch (e) {
+						console.log("Failed to clear activity", e);
+						setError("Failed to clear activity. Check server logs");
+					}
+					updateProcessing(false);
+				}}
+			>
+				<label
+					className="sr-only mb-4 block text-xl"
+					htmlFor="clearActivity"
+				>
+					Number to clear (empty clears all)
+				</label>
+				<div className="relative flex">
+					<input
+						value={num}
+						disabled={loading}
+						onChange={(e) => setNum(Number(e.target.value))}
+						className="block w-full rounded-full bg-white/20 py-3 pr-13 pl-4 text-white outline-none focus-visible:border-2 focus-visible:border-white focus-visible:py-2.5 focus-visible:pr-12.5 focus-visible:pl-3.5 disabled:cursor-not-allowed"
+						id="clearActivity"
+						type="number"
+						placeholder="Url"
+					/>
+					<Button
+						Icon={DeleteIcon}
+						iconLabel="Add Source"
+						disabled={demo || loading}
+						animate={clearActivity.isPending}
+						error={!!error}
+						theme="red"
+						invert={false}
+						data-isolate
+						type="submit"
+						className="absolute top-0 right-0"
+					/>
+				</div>
+			</form>
+		</div>
+	);
+}
+
+function RefreshRoadmap() {
+	const { demo } = Route.useSearch();
+
+	const processing = useProcessing((state) => state.processing);
+
+	const refresh = useRefreshRSS();
+
+	return (
+		<div className="mx-auto flex w-90 flex-col gap-2 px-5">
+			<Button
+				Icon={RefreshIcon}
+				iconLabel="Refresh RSS"
+				disabled={demo || processing}
+				animate={refresh.isPending}
+				error={refresh.isError}
+				onClick={async () => {
+					if (processing) return;
+
+					updateProcessing(true);
+					try {
+						await refresh.mutateAsync();
+					} catch (e) {
+						console.log("Error refreshing RSS", e);
+					}
+					updateProcessing(false);
+				}}
+			>
+				Refresh
+			</Button>
+		</div>
+	);
+}
+
 function Source({ source }: { source?: TSource }) {
 	const { sourceId } = Route.useParams();
 	const { demo } = Route.useSearch();
@@ -131,13 +232,12 @@ function Source({ source }: { source?: TSource }) {
 
 	const processing = useProcessing((state) => state.processing);
 
-	// const domain = source ? new URL(source.url).hostname : undefined;
-
 	return (
 		<div
 			className={clsx(
-				"flex flex-col items-stretch gap-4 rounded-lg px-5 py-3",
+				"flex flex-none flex-col items-stretch gap-4 rounded-lg p-5 lg:w-auto",
 				sourceId === source?.id && "bg-white/20",
+				source ? "w-full max-w-90 lg:max-w-none" : "w-30",
 			)}
 		>
 			<div className="flex items-center justify-between gap-2">
@@ -157,32 +257,7 @@ function Source({ source }: { source?: TSource }) {
 						{source ? source.url : "All"}{" "}
 					</Link>
 				</p>
-				{/* {source && (
-					<p
-						className={clsx(
-							"rounded-full px-2 py-1 text-sm text-black",
-							source.enabled ? "bg-green-400" : "bg-red-400",
-						)}
-					>
-						{source.enabled ? "Enabled" : "Disabled"}
-					</p>
-				)} */}
 			</div>
-			{/* <div className="flex min-w-0 flex-1 flex-col gap-2">
-				{source && (
-					<a
-						href={source.url}
-						target="_blank"
-						referrerPolicy="no-referrer"
-						className="flex items-center gap-2 text-sm"
-					>
-						<LinkIcon className="flex-none" />
-						<span className="min-w-0 flex-1 overflow-hidden text-nowrap text-ellipsis">
-							{source.url}
-						</span>
-					</a>
-				)}
-			</div> */}
 
 			{source && (
 				<div className="flex items-stretch justify-between">
@@ -287,7 +362,7 @@ function SourceList() {
 	}
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex w-full flex-none gap-2 overflow-x-auto px-4 lg:flex-col lg:px-0">
 			<Source />
 			{sources.map((source) => (
 				<Source source={source} key={source.id} />
@@ -327,10 +402,33 @@ function ActivityList() {
 	}
 
 	return (
-		<div className="h-full rounded-lg bg-white/20 p-4">
-			<div className="max-h-full overflow-y-auto">
+		<div className="flex h-full flex-col rounded-lg bg-white/20 p-4">
+			<div className="flex max-h-full max-w-full flex-col gap-4 overflow-y-auto">
 				{activity.map((post) => (
-					<p key={post.id}>{post.post_url}</p>
+					<div className="flex max-w-full items-center justify-between gap-4 not-last:border-b-2 not-last:border-white/20 not-last:pb-4">
+						<div className="flex min-w-0 flex-1 flex-wrap gap-1">
+							<p className="w-40">{formatDate(post.timestamp)}</p>
+							<p
+								className="max-w-full overflow-hidden text-nowrap text-ellipsis"
+								title={post.source_url}
+							>
+								Source: {post.source_url}
+							</p>
+							<p
+								key={post.id}
+								className="max-w-full overflow-hidden text-nowrap text-ellipsis"
+								title={post.post_url}
+							>
+								URL: {post.post_url}
+							</p>
+						</div>
+						<ExternalLink
+							Icon={LinkIcon}
+							iconLabel="View Post"
+							href={post.post_url}
+							size="small"
+						/>
+					</div>
 				))}
 			</div>
 		</div>
@@ -339,13 +437,17 @@ function ActivityList() {
 
 function RouteComponent() {
 	return (
-		<div className="relative flex h-full max-h-full justify-center px-4 pt-24">
-			<div className="flex max-h-full w-90 flex-none flex-col gap-6 overflow-y-auto py-4">
+		<div className="relative flex flex-col items-center gap-2 pt-24 lg:h-full lg:max-h-full lg:flex-row lg:items-start lg:justify-center lg:gap-0 lg:px-4">
+			<div className="flex w-full flex-none flex-col gap-6 overflow-y-auto py-4 lg:max-h-full lg:w-90">
 				<AddSource />
+				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
+				<ClearActivity />
+				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
+				<RefreshRoadmap />
 				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
 				<SourceList />
 			</div>
-			<div className="ml-6 h-full w-full overflow-auto py-4">
+			<div className="w-full overflow-auto px-4 py-4 lg:ml-6 lg:h-full lg:px-0">
 				<ActivityList />
 			</div>
 		</div>

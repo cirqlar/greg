@@ -19,7 +19,7 @@ import {
 	useUnwatchTabMutation,
 	useWatchTabMutation,
 } from "@/query/roadmap";
-import { useRecheckRSS } from "@/query/activity";
+import { useRefreshRSS } from "@/query/activity";
 import type { TRTab, TWatchedTab } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
 
@@ -253,7 +253,7 @@ function RefreshRoadmap() {
 
 	const processing = useProcessing((state) => state.processing);
 
-	const refresh = useRecheckRSS();
+	const refresh = useRefreshRSS();
 
 	return (
 		<div className="mx-auto flex w-90 flex-col gap-2 px-5">

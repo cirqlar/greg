@@ -49,9 +49,26 @@ function RouteComponent() {
 		}
 	}, [loginQuery.data, loginQuery.isFetching, demo, navigate]);
 
+	const logout = async () => {
+		setLoggingOut(true);
+		updateProcessing(true);
+		if (!demo) {
+			try {
+				await logoutMutation.mutateAsync();
+			} catch (e) {
+				console.log("error logging out", e);
+				// Kill logout attempt rather than navigate?
+			}
+		}
+		setLoggingOut(false);
+		updateProcessing(false);
+
+		navigate({ to: "/", search: {} });
+	};
+
 	return (
 		<>
-			<header className="fixed top-6 right-4 z-50 flex items-center gap-4">
+			<header className="fixed top-6 right-4 z-50 flex items-center gap-4 rounded-full bg-black">
 				<Link
 					// Link
 					to="/rss/{-$sourceId}"
@@ -81,25 +98,20 @@ function RouteComponent() {
 					disabled={loggingOut}
 					animate={loggingOut}
 					theme="red"
-					onClick={async () => {
-						setLoggingOut(true);
-						updateProcessing(true);
-						if (!demo) {
-							try {
-								await logoutMutation.mutateAsync();
-							} catch (e) {
-								console.log("error logging out", e);
-								// Kill logout attempt rather than navigate?
-							}
-						}
-						setLoggingOut(false);
-						updateProcessing(false);
-
-						navigate({ to: "/", search: {} });
-					}}
+					className="hidden lg:flex"
+					onClick={logout}
 				>
 					LogOut
 				</Button>
+				<Button
+					Icon={PowerIcon}
+					iconLabel="Logout"
+					disabled={loggingOut}
+					animate={loggingOut}
+					theme="red"
+					className="lg:hidden"
+					onClick={logout}
+				/>
 			</header>
 			<Outlet />
 		</>

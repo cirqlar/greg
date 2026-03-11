@@ -64,7 +64,7 @@
 		border-radius: 100vw;
 		background-color: color-mix(
 			in oklab,
-			var(--color-white) 30%,
+			var(--color-white) 20%,
 			transparent
 		);
 		outline: none;

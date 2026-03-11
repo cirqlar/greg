@@ -12,8 +12,8 @@ import { formatDate } from "../components/date";
 import type { TActivity } from "../query/types";
 import {
 	useActivity,
-	useClearActivities,
-	useRecheckRSS,
+	useClearActivity,
+	useRefreshRSS,
 } from "../query/activity";
 
 export const Route = createFileRoute("/_layout/activity")({
@@ -76,9 +76,9 @@ function Activity() {
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	const recheck = useRecheckRSS();
+	const recheck = useRefreshRSS();
 
-	const clearActivities = useClearActivities();
+	const clearActivities = useClearActivity();
 
 	return (
 		<>

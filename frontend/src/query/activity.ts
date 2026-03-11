@@ -15,7 +15,7 @@ export function useActivity(sourceId?: number, demo?: boolean) {
 	});
 }
 
-export function useRecheckRSS() {
+export function useRefreshRSS() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
@@ -29,7 +29,7 @@ export function useRecheckRSS() {
 	});
 }
 
-export function useClearActivities() {
+export function useClearActivity() {
 	const queryClient = useQueryClient();
 
 	return useMutation({

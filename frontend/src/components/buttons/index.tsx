@@ -22,6 +22,7 @@ type BtnProps = {
 	error?: boolean;
 	size?: "big" | "small";
 	theme?: "green" | "red" | "none";
+	invert?: boolean;
 };
 
 type OmitProps = "style" | "aria-label";
@@ -74,6 +75,7 @@ function useButtonProps<T>(props: CustomButtonProps<T>) {
 			error: props.error,
 			size: props.size,
 			theme: props.theme ?? "none",
+			invert: props.invert,
 		};
 
 		delete copied.Icon;
@@ -82,6 +84,7 @@ function useButtonProps<T>(props: CustomButtonProps<T>) {
 		delete copied.error;
 		delete copied.size;
 		delete copied.theme;
+		delete copied.invert;
 
 		return { copied_props: copied as T, icon, btn };
 	}, [props]);
@@ -106,7 +109,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				data-error={btn.error}
 				data-icononly={!copied_props.children}
 				data-theme={btn.theme}
-				data-invert={!copied_props.children && btn.theme !== "none"}
+				data-invert={
+					btn.invert ??
+					(!copied_props.children && btn.theme !== "none")
+				}
 				className={clsx(
 					copied_props.className,
 					copied_props.children && "pl-4",
@@ -153,7 +159,10 @@ const InternalLink = React.forwardRef<HTMLAnchorElement, InternalLinkProps>(
 				data-error={btn.error}
 				data-icononly={!copied_props.children}
 				data-theme={btn.theme}
-				data-invert={!copied_props.children && btn.theme !== "none"}
+				data-invert={
+					btn.invert ??
+					(!copied_props.children && btn.theme !== "none")
+				}
 				className={clsx(
 					styles.button,
 					copied_props.className,
