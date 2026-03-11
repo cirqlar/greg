@@ -14,6 +14,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import { Button, ExternalLink } from "@/components/buttons";
+import { formatDate } from "@/components/date";
 import {
 	useAddSource,
 	useEnableSource,
@@ -23,7 +24,6 @@ import {
 import { useActivity, useClearActivity, useRefreshRSS } from "@/query/activity";
 import type { TSource } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
-import { formatDate } from "@/components/date";
 
 export const Route = createFileRoute("/_app/rss/{-$sourceId}")({
 	component: RouteComponent,

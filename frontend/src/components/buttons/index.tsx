@@ -6,9 +6,10 @@ import React, {
 	type ComponentType,
 	type AnchorHTMLAttributes,
 } from "react";
-import { createLink } from "@tanstack/react-router";
+
 import clsx from "clsx";
 import { PlusIcon } from "@storybook/icons";
+import { createLink } from "@tanstack/react-router";
 
 import styles from "./buttons.module.css";
 
