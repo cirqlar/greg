@@ -98,8 +98,20 @@ pub async fn get_roadmap_activities(
             &format!(
                 "SELECT 
                     ra.id,
-                    ra.timestamp
+                    ra.timestamp,
+                    rch.count as change_count
                 FROM {R_ACTIVITIES_T} as ra
+                LEFT JOIN (
+                    SELECT inrch.activity_id, COUNT(inrch.id) as count FROM {R_CHANGES_T} AS inrch
+                    WHERE
+                        inrch.type = 'tab_removed'
+                        OR inrch.type = 'tab_added'
+                        OR inrch.type = 'card_removed'
+                        OR inrch.type = 'card_added'
+                        OR inrch.type = 'card_modified'
+                    GROUP BY inrch.activity_id
+                ) rch
+                    ON ra.id = rch.activity_id
                 ORDER BY ra.id DESC
                 LIMIT ?1 OFFSET ?2
                 "

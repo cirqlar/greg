@@ -29,7 +29,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
         let id = Uuid::new_v4();
 
         info!("[Login] Inserting login key");
-        let db = data.db.connect().unwrap();
+        let db = data.app_db.connect().unwrap();
 
         let result = db
             .execute(
@@ -74,7 +74,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> impl Resp
 
 #[post("/recheck")]
 pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db).await {
         check_sources(&data).await;
         HttpResponse::Ok().json(Success {
@@ -87,7 +87,7 @@ pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {
 
 #[post("/recheck_roadmap")]
 pub async fn recheck_roadmap(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db).await {
         check_roadmap(&data).await;
         HttpResponse::Ok().json(Success {
@@ -140,7 +140,7 @@ pub async fn add_source(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db.clone()).await {
         if let Some(ret) = test_source(&source.url).await {
             return ret;
@@ -194,7 +194,7 @@ pub async fn enable_source(
 ) -> impl Responder {
     let (source_id, new_enabled) = path.into_inner();
 
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
 
     if is_logged_in(&req, db.clone()).await {
         info!(
@@ -244,7 +244,7 @@ pub async fn add_watched_tab(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db.clone()).await {
         let tab_id = path.into_inner();
 

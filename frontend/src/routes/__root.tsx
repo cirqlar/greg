@@ -3,7 +3,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createRootRoute({
 	component: () => (
-		<div className="w-full min-h-full h-full dark:bg-black bg-white dark:text-white text-black overflow-auto">
+		<div className="h-full min-h-full w-full overflow-auto bg-white text-black dark:bg-black dark:text-white">
 			<>
 				<Outlet />
 				{/* <TanStackRouterDevtools /> */}

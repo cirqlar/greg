@@ -12,14 +12,22 @@ pub async fn get_database() -> Database {
         Builder::new_remote(database_url, auth_key)
             .build()
             .await
-            .unwrap()
+            .expect("Can Connect to remote db")
     } else {
         Builder::new_local(env::var("LOCAL_DB_URL").expect("LOCAL_DB_URL must be set"))
             .flags(OpenFlags::default())
             .build()
             .await
-            .unwrap()
+            .expect("Can connect to local db")
     }
+}
+
+pub async fn get_demo_database() -> Database {
+    Builder::new_local("db/demo.db")
+        .flags(OpenFlags::default())
+        .build()
+        .await
+        .expect("Can connect to demo db")
 }
 
 pub const SOURCES_T: &str = "sources";

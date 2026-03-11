@@ -1,12 +1,28 @@
-use actix_web::{HttpRequest, HttpResponse, Responder, delete, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, cookie::Cookie, delete, web};
 use libsql::params;
 use log::{error, info};
 
 use crate::{
     db::{ACTIVITIES_T, R_WATCHED_TABS_T, SOURCES_T},
-    types::{AppData, Failure, Success},
+    types::{AppData, Failure, LOGGED_IN_COOKIE, Success},
     utils::{is_logged_in, return_password_error},
 };
+
+#[delete("/logout")]
+pub async fn logout() -> impl Responder {
+    let mut c = Cookie::build(LOGGED_IN_COOKIE, "")
+        .path("/")
+        .secure(true)
+        .http_only(true)
+        .expires(None)
+        .finish();
+
+    c.make_removal();
+
+    HttpResponse::Ok().cookie(c).json(Success {
+        message: "Successfully logged out".into(),
+    })
+}
 
 #[delete("/source/{id}")]
 pub async fn delete_source(
@@ -14,7 +30,7 @@ pub async fn delete_source(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     let id = path.into_inner();
 
     if is_logged_in(&req, db.clone()).await {
@@ -51,7 +67,7 @@ pub async fn delete_source(
 
 #[delete("/activity")]
 pub async fn clear_all_activities(data: AppData, req: HttpRequest) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db.clone()).await {
         let result = db
             .execute(&format!("DELETE FROM {ACTIVITIES_T}"), params!())
@@ -83,7 +99,7 @@ pub async fn clear_activities(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     let num = path.into_inner();
 
     if is_logged_in(&req, db.clone()).await {
@@ -138,7 +154,7 @@ pub async fn delete_watched_tab(
     data: AppData,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = data.db.connect().unwrap();
+    let db = data.app_db.connect().unwrap();
     let id = path.into_inner();
 
     if is_logged_in(&req, db.clone()).await {

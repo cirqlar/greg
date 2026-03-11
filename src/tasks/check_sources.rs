@@ -399,7 +399,7 @@ pub async fn check_sources(data: &AppData) {
         warn!("[Check Sources] will not send emails as feature is not enabled");
     }
 
-    let sources_res = get_sources(data.db.connect().unwrap()).await;
+    let sources_res = get_sources(data.app_db.connect().unwrap()).await;
     let Ok(sources) = sources_res else {
         panic!(
             "Couldn't check sources. Err: {}",
@@ -409,7 +409,7 @@ pub async fn check_sources(data: &AppData) {
 
     let mut threads = JoinSet::new();
     let client = reqwest::Client::new();
-    let conn = data.db.connect().unwrap();
+    let conn = data.app_db.connect().unwrap();
 
     for source in sources {
         let s_client = client.clone();
