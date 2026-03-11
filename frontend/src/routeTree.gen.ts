@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutSourcesRouteImport } from './routes/_layout.sources'
 import { Route as LayoutRoadmapsRouteImport } from './routes/_layout.roadmaps'
 import { Route as LayoutActivityRouteImport } from './routes/_layout.activity'
+import { Route as AppRmapRouteRouteImport } from './routes/_app/rmap/route'
 import { Route as LayoutRoadmapRoadmap_idRouteImport } from './routes/_layout.roadmap.$roadmap_id'
 import { Route as AppRssChar123SourceIdChar125RouteImport } from './routes/_app/rss/{-$sourceId}'
 
@@ -46,6 +47,11 @@ const LayoutActivityRoute = LayoutActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => LayoutRoute,
 } as any)
+const AppRmapRouteRoute = AppRmapRouteRouteImport.update({
+  id: '/rmap',
+  path: '/rmap',
+  getParentRoute: () => AppRoute,
+} as any)
 const LayoutRoadmapRoadmap_idRoute = LayoutRoadmapRoadmap_idRouteImport.update({
   id: '/roadmap/$roadmap_id',
   path: '/roadmap/$roadmap_id',
@@ -60,6 +66,7 @@ const AppRssChar123SourceIdChar125Route =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/rmap': typeof AppRmapRouteRoute
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/rmap': typeof AppRmapRouteRoute
   '/activity': typeof LayoutActivityRoute
   '/roadmaps': typeof LayoutRoadmapsRoute
   '/sources': typeof LayoutSourcesRoute
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_layout': typeof LayoutRouteWithChildren
+  '/_app/rmap': typeof AppRmapRouteRoute
   '/_layout/activity': typeof LayoutActivityRoute
   '/_layout/roadmaps': typeof LayoutRoadmapsRoute
   '/_layout/sources': typeof LayoutSourcesRoute
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/rmap'
     | '/activity'
     | '/roadmaps'
     | '/sources'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/rmap'
     | '/activity'
     | '/roadmaps'
     | '/sources'
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_layout'
+    | '/_app/rmap'
     | '/_layout/activity'
     | '/_layout/roadmaps'
     | '/_layout/sources'
@@ -164,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutActivityRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_app/rmap': {
+      id: '/_app/rmap'
+      path: '/rmap'
+      fullPath: '/rmap'
+      preLoaderRoute: typeof AppRmapRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_layout/roadmap/$roadmap_id': {
       id: '/_layout/roadmap/$roadmap_id'
       path: '/roadmap/$roadmap_id'
@@ -182,10 +201,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppRmapRouteRoute: typeof AppRmapRouteRoute
   AppRssChar123SourceIdChar125Route: typeof AppRssChar123SourceIdChar125Route
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppRmapRouteRoute: AppRmapRouteRoute,
   AppRssChar123SourceIdChar125Route: AppRssChar123SourceIdChar125Route,
 }
 

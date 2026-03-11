@@ -65,7 +65,7 @@ function RouteComponent() {
 				</Link>
 				<Link
 					// Link
-					to="/roadmaps"
+					to="/rmap"
 					activeOptions={{ exact: true }}
 					activeProps={{ className: "font-bold" }}
 					search={(prev) => prev}
