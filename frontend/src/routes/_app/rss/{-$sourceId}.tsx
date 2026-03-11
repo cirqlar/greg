@@ -138,7 +138,9 @@ function ClearActivity() {
 
 	return (
 		<div className="mx-auto flex w-90 flex-col gap-2 px-5">
-			<h3 className="mb-2 text-xl font-bold">Clear Activity</h3>
+			<h3 className="mb-2 text-xl font-bold">
+				Clear Activity (0 clears all)
+			</h3>
 			<form
 				onSubmit={async (e) => {
 					e.preventDefault();
@@ -405,7 +407,10 @@ function ActivityList() {
 		<div className="flex h-full flex-col rounded-lg bg-white/20 p-4">
 			<div className="flex max-h-full max-w-full flex-col gap-4 overflow-y-auto">
 				{activity.map((post) => (
-					<div className="flex max-w-full items-center justify-between gap-4 not-last:border-b-2 not-last:border-white/20 not-last:pb-4">
+					<div
+						key={post.id}
+						className="flex max-w-full items-center justify-between gap-4 not-last:border-b-2 not-last:border-white/20 not-last:pb-4"
+					>
 						<div className="flex min-w-0 flex-1 flex-wrap gap-1">
 							<p className="w-40">{formatDate(post.timestamp)}</p>
 							<p

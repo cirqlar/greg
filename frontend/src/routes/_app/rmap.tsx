@@ -13,13 +13,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button, ExternalLink, Link } from "@/components/buttons";
 import { formatDate } from "@/components/date";
 import {
+	useRefreshRoadmap,
 	useRoadmapActivity,
 	useRoadmapTabs,
 	useRoadmapWatchedTabs,
 	useUnwatchTabMutation,
 	useWatchTabMutation,
 } from "@/query/roadmap";
-import { useRefreshRSS } from "@/query/activity";
 import type { TRTab, TWatchedTab } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
 
@@ -253,7 +253,7 @@ function RefreshRoadmap() {
 
 	const processing = useProcessing((state) => state.processing);
 
-	const refresh = useRefreshRSS();
+	const refresh = useRefreshRoadmap();
 
 	return (
 		<div className="mx-auto flex w-90 flex-col gap-2 px-5">

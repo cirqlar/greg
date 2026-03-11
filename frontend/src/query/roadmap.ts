@@ -75,3 +75,19 @@ export function useWatchTabMutation() {
 		},
 	});
 }
+
+export function useRefreshRoadmap() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: () =>
+			fetch("/api/recheck_roadmap", {
+				method: "POST",
+			}).then(handleFetchResponse("Error refreshing roadmap")),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["roadmap_activity"] });
+			queryClient.invalidateQueries({ queryKey: ["most_recent_tabs"] });
+			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+		},
+	});
+}
