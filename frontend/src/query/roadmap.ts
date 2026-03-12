@@ -14,9 +14,9 @@ import type {
 import { handleFetchResponse } from "./util";
 
 export function useRoadmapActivity(demo?: boolean) {
-	return useQuery<TRoadmapActivity[]>({
+	return useQuery({
 		queryKey: ["roadmap_activity", demo ?? false],
-		queryFn: () =>
+		queryFn: (): Promise<TRoadmapActivity[]> =>
 			fetch(`/api/roadmap_activity${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching roadmap activity"),
 			),
@@ -48,9 +48,9 @@ export function useInfiniteRoadmapActivity(demo?: boolean, count: number = 35) {
 }
 
 export function useRoadmapTabs(demo?: boolean) {
-	return useQuery<TRTab[]>({
+	return useQuery({
 		queryKey: ["most_recent_tabs", demo ?? false],
-		queryFn: () =>
+		queryFn: (): Promise<TRTab[]> =>
 			fetch(`/api/most_recent_tabs${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching most recent tabs"),
 			),
@@ -58,9 +58,9 @@ export function useRoadmapTabs(demo?: boolean) {
 }
 
 export function useRoadmapWatchedTabs(demo?: boolean) {
-	return useQuery<TWatchedTab[]>({
+	return useQuery({
 		queryKey: ["watched_tabs", demo ?? false],
-		queryFn: () =>
+		queryFn: (): Promise<TWatchedTab[]> =>
 			fetch(`/api/watched_tabs${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching watched tabs"),
 			),
@@ -68,9 +68,9 @@ export function useRoadmapWatchedTabs(demo?: boolean) {
 }
 
 export function useRoadmapChanges(roadmapId: number, demo?: boolean) {
-	return useQuery<TRoadmapChange[]>({
+	return useQuery({
 		queryKey: ["roadmap", roadmapId, demo ?? false],
-		queryFn: () =>
+		queryFn: (): Promise<TRoadmapChange[]> =>
 			fetch(
 				`/api/roadmap_activity/${roadmapId}${demo ? "?demo=true" : ""}`,
 			).then(handleFetchResponse("Error fetching changes")),

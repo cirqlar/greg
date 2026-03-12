@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { handleFetchResponse } from "./util";
 
 export function useLoginQuery() {
-	return useQuery<boolean>({
+	return useQuery({
 		queryKey: ["loggedin"],
-		queryFn: () =>
+		queryFn: (): Promise<boolean> =>
 			fetch("/api/check-logged-in").then(
 				handleFetchResponse("Error checking logged in"),
 			),
