@@ -4,9 +4,9 @@ import type { TSource } from "./types";
 import { handleFetchResponse } from "./util";
 
 export function useSources(demo?: boolean) {
-	return useQuery<TSource[]>({
+	return useQuery({
 		queryKey: ["sources", demo ?? false],
-		queryFn: () =>
+		queryFn: (): Promise<TSource[]> =>
 			fetch(`/api/sources${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching sources"),
 			),

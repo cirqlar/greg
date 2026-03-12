@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import clsx from "clsx";
 import {
@@ -13,8 +13,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button, ExternalLink, Link } from "@/components/buttons";
 import { formatDate } from "@/components/date";
 import {
+	useInfiniteRoadmapActivity,
 	useRefreshRoadmap,
-	useRoadmapActivity,
 	useRoadmapTabs,
 	useRoadmapWatchedTabs,
 	useUnwatchTabMutation,
@@ -191,7 +191,12 @@ function ChangeList() {
 		data: roadmapActivity,
 		error,
 		isLoading,
-	} = useRoadmapActivity(demo);
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	} = useInfiniteRoadmapActivity(demo);
+
+	const [hideEmpty, setHideEmpty] = useState(true);
 
 	if (isLoading) {
 		return (
@@ -201,7 +206,11 @@ function ChangeList() {
 		);
 	}
 
-	if (error || !roadmapActivity) {
+	if (
+		(error && (!roadmapActivity || !roadmapActivity.pages)) ||
+		!roadmapActivity ||
+		!roadmapActivity.pages
+	) {
 		return (
 			<div className="flex h-full items-center justify-center rounded-lg bg-white/20 p-4">
 				<p>Error loading activity</p>
@@ -209,7 +218,10 @@ function ChangeList() {
 		);
 	}
 
-	if (roadmapActivity.length === 0) {
+	if (
+		roadmapActivity.pages.length === 0 ||
+		roadmapActivity.pages[0].length === 0
+	) {
 		return (
 			<div className="flex h-full items-center justify-center rounded-lg bg-white/20 p-4">
 				<p>No activity</p>
@@ -218,31 +230,74 @@ function ChangeList() {
 	}
 
 	return (
-		<div className="h-full rounded-lg bg-white/20 p-4">
+		<div className="flex h-full flex-col gap-4 rounded-lg bg-white/20 p-4">
+			<div className="flex items-center justify-end gap-2">
+				<input
+					checked={hideEmpty}
+					onChange={(e) => setHideEmpty(e.target.checked)}
+					type="checkbox"
+					name="filterEmpty"
+					id="filterEmpty"
+				/>
+				<label htmlFor="filterEmpty">Hide Empty Changes</label>
+			</div>
 			<div className="flex max-h-full flex-col gap-2 overflow-y-auto">
-				{roadmapActivity.map((activity) => (
-					<div
-						key={activity.id}
-						className="flex items-center justify-between not-last:border-b-2 not-last:border-white/20 not-last:pb-2"
-					>
-						<p className="w-40">{formatDate(activity.timestamp)}</p>
-						<p className="w-24">
-							{activity.change_count ?? 0}{" "}
-							{activity.change_count === 1 ? "Change" : "Changes"}
-						</p>
+				{roadmapActivity.pages.map((page, i) => (
+					<Fragment key={i}>
+						{page
+							.filter(
+								(activity) =>
+									(activity.change_count &&
+										activity.change_count !== 0) ||
+									!hideEmpty,
+							)
+							.map((activity) => (
+								<div
+									key={activity.id}
+									className="flex items-center justify-between not-last:border-b-2 not-last:border-white/20 not-last:pb-2"
+								>
+									<p className="w-40">
+										{formatDate(activity.timestamp)}
+									</p>
+									<p className="w-24">
+										{activity.change_count ?? 0}{" "}
+										{activity.change_count === 1
+											? "Change"
+											: "Changes"}
+									</p>
 
-						<Link
-							to="/roadmap/$roadmapId"
-							params={{ roadmapId: activity.id }}
-							search={(prev) => prev}
-							iconLabel="View Changes"
-							Icon={EyeIcon}
-							size="small"
-						>
-							View
-						</Link>
-					</div>
+									<Link
+										to="/roadmap/$roadmapId"
+										params={{ roadmapId: activity.id }}
+										search={(prev) => prev}
+										iconLabel="View Changes"
+										Icon={EyeIcon}
+										size="small"
+									>
+										View
+									</Link>
+								</div>
+							))}
+					</Fragment>
 				))}
+
+				<Button
+					Icon={RefreshIcon}
+					iconLabel="Load more activity"
+					disabled={!hasNextPage || isFetchingNextPage}
+					animate={isFetchingNextPage}
+					error={!!error}
+					onClick={() =>
+						!isFetchingNextPage && hasNextPage && fetchNextPage()
+					}
+					className="mx-auto min-w-72"
+				>
+					{isFetchingNextPage
+						? "Loading"
+						: hasNextPage
+							? "Load More"
+							: "No More Activity"}
+				</Button>
 			</div>
 		</div>
 	);

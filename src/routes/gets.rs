@@ -20,6 +20,14 @@ struct Query {
     demo: bool,
 }
 
+#[derive(Debug, Deserialize)]
+struct PaginationQuery {
+    #[serde(default)]
+    demo: bool,
+    count: Option<u32>,
+    skip: Option<u32>,
+}
+
 #[get("/check-logged-in")]
 pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder {
     let db = data.app_db.connect().unwrap();
@@ -76,7 +84,7 @@ pub async fn get_sources(
 #[get("/activity")]
 pub async fn get_activity(
     data: AppData,
-    query: web::Query<Query>,
+    query: web::Query<PaginationQuery>,
     req: HttpRequest,
 ) -> impl Responder {
     let db = if query.demo {
@@ -87,7 +95,7 @@ pub async fn get_activity(
 
     if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
-        match sources::get_activity(db, 35, 0).await {
+        match sources::get_activity(db, query.count.unwrap_or(35), query.skip.unwrap_or(0)).await {
             Ok(activities) => {
                 info!("[Get Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)
@@ -109,7 +117,7 @@ pub async fn get_activity(
 pub async fn get_source_activity(
     data: AppData,
     path: web::Path<u32>,
-    query: web::Query<Query>,
+    query: web::Query<PaginationQuery>,
     req: HttpRequest,
 ) -> impl Responder {
     let db = if query.demo {
@@ -121,7 +129,14 @@ pub async fn get_source_activity(
 
     if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Activity] Getting activities from db");
-        match sources::get_source_activity(db, 35, 0, source_id).await {
+        match sources::get_source_activity(
+            db,
+            query.count.unwrap_or(35),
+            query.skip.unwrap_or(0),
+            source_id,
+        )
+        .await
+        {
             Ok(activities) => {
                 info!("[Get Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)
@@ -142,7 +157,7 @@ pub async fn get_source_activity(
 #[get("/roadmap_activity")]
 pub async fn get_roadmap_activity(
     data: AppData,
-    query: web::Query<Query>,
+    query: web::Query<PaginationQuery>,
     req: HttpRequest,
 ) -> impl Responder {
     let db = if query.demo {
@@ -154,7 +169,7 @@ pub async fn get_roadmap_activity(
     if query.demo || is_logged_in(&req, db.clone()).await {
         info!("[Get Roadmap Activity] Getting activities from db");
 
-        match get_roadmap_activities(db, 35, 0).await {
+        match get_roadmap_activities(db, query.count.unwrap_or(35), query.skip.unwrap_or(0)).await {
             Ok(activities) => {
                 info!("[Get Roadmap Activity] Got activities successfully");
                 HttpResponse::Ok().json(activities)
