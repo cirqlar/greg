@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import clsx from "clsx";
 import {
@@ -21,7 +21,11 @@ import {
 	useDeleteSource,
 	useSources,
 } from "@/query/sources";
-import { useActivity, useClearActivity, useRefreshRSS } from "@/query/activity";
+import {
+	useClearActivity,
+	useInfiniteActivity,
+	useRefreshRSS,
+} from "@/query/activity";
 import type { TSource } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
 
@@ -192,7 +196,7 @@ function ClearActivity() {
 	);
 }
 
-function RefreshRoadmap() {
+function RefreshRSS() {
 	const { demo } = Route.useSearch();
 
 	const processing = useProcessing((state) => state.processing);
@@ -377,7 +381,14 @@ function ActivityList() {
 	const { sourceId } = Route.useParams();
 	const { demo } = Route.useSearch();
 
-	const { data: activity, error, isLoading } = useActivity(sourceId, demo);
+	const {
+		data: activity,
+		error,
+		isLoading,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	} = useInfiniteActivity(sourceId, demo);
 
 	if (isLoading) {
 		return (
@@ -387,7 +398,13 @@ function ActivityList() {
 		);
 	}
 
-	if (error || !activity) {
+	if (
+		(error && (!activity || !activity.pages)) ||
+		!activity ||
+		!activity.pages
+	) {
+		console.log("Error if error", error);
+
 		return (
 			<div className="flex h-full items-center justify-center rounded-lg bg-white/20 p-4">
 				<p>Error loading activity</p>
@@ -395,7 +412,7 @@ function ActivityList() {
 		);
 	}
 
-	if (activity.length === 0) {
+	if (activity.pages.length === 0 || activity.pages[0].length === 0) {
 		return (
 			<div className="flex h-full items-center justify-center rounded-lg bg-white/20 p-4">
 				<p>No activity</p>
@@ -406,35 +423,59 @@ function ActivityList() {
 	return (
 		<div className="flex h-full flex-col rounded-lg bg-white/20 p-4">
 			<div className="flex max-h-full max-w-full flex-col gap-4 overflow-y-auto">
-				{activity.map((post) => (
-					<div
-						key={post.id}
-						className="flex max-w-full items-center justify-between gap-4 not-last:border-b-2 not-last:border-white/20 not-last:pb-4"
-					>
-						<div className="flex min-w-0 flex-1 flex-wrap gap-1">
-							<p className="w-40">{formatDate(post.timestamp)}</p>
-							<p
-								className="max-w-full overflow-hidden text-nowrap text-ellipsis"
-								title={post.source_url}
-							>
-								Source: {post.source_url}
-							</p>
-							<p
+				{activity.pages.map((page, i) => (
+					<Fragment key={i}>
+						{page.map((post) => (
+							<div
 								key={post.id}
-								className="max-w-full overflow-hidden text-nowrap text-ellipsis"
-								title={post.post_url}
+								className="flex max-w-full items-center justify-between gap-4 not-last:border-b-2 not-last:border-white/20 not-last:pb-4"
 							>
-								URL: {post.post_url}
-							</p>
-						</div>
-						<ExternalLink
-							Icon={LinkIcon}
-							iconLabel="View Post"
-							href={post.post_url}
-							size="small"
-						/>
-					</div>
+								<div className="flex min-w-0 flex-1 flex-wrap gap-1">
+									<p className="w-40">
+										{formatDate(post.timestamp)}
+									</p>
+									<p
+										className="max-w-full overflow-hidden text-nowrap text-ellipsis"
+										title={post.source_url}
+									>
+										Source: {post.source_url}
+									</p>
+									<p
+										key={post.id}
+										className="max-w-full overflow-hidden text-nowrap text-ellipsis"
+										title={post.post_url}
+									>
+										URL: {post.post_url}
+									</p>
+								</div>
+								<ExternalLink
+									Icon={LinkIcon}
+									iconLabel="View Post"
+									href={post.post_url}
+									size="small"
+								/>
+							</div>
+						))}
+					</Fragment>
 				))}
+
+				<Button
+					Icon={RefreshIcon}
+					iconLabel="Load more activity"
+					disabled={!hasNextPage || isFetchingNextPage}
+					animate={isFetchingNextPage}
+					error={!!error}
+					onClick={() =>
+						!isFetchingNextPage && hasNextPage && fetchNextPage()
+					}
+					className="mx-auto min-w-72"
+				>
+					{isFetchingNextPage
+						? "Loading"
+						: hasNextPage
+							? "Load More"
+							: "No More Activity"}
+				</Button>
 			</div>
 		</div>
 	);
@@ -448,7 +489,7 @@ function RouteComponent() {
 				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
 				<ClearActivity />
 				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
-				<RefreshRoadmap />
+				<RefreshRSS />
 				<div className="mx-5 h-0.5 flex-none content-stretch bg-white/20"></div>
 				<SourceList />
 			</div>

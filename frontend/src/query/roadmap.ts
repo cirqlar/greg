@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 
 import type {
 	TRoadmapActivity,
@@ -15,6 +20,30 @@ export function useRoadmapActivity(demo?: boolean) {
 			fetch(`/api/roadmap_activity${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching roadmap activity"),
 			),
+	});
+}
+
+export function useInfiniteRoadmapActivity(demo?: boolean, count: number = 35) {
+	return useInfiniteQuery({
+		queryKey: ["roadmap_activity", count, demo ?? false],
+		queryFn: ({ pageParam }): Promise<TRoadmapActivity[]> => {
+			const searchParams = new URLSearchParams();
+			searchParams.append("count", count.toString());
+			searchParams.append("skip", pageParam.toString());
+			if (demo) searchParams.append("demo", "true");
+
+			return fetch(
+				`/api/roadmap_activity?${searchParams.toString()}`,
+			).then(handleFetchResponse("Error fetching roadmap activity"));
+		},
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+			if (lastPage.length < count) {
+				return undefined;
+			} else {
+				return lastPageParam + count;
+			}
+		},
 	});
 }
 
