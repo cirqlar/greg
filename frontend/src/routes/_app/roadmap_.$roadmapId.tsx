@@ -37,7 +37,7 @@ function ChangeGrid() {
 			<div className="">
 				<p>Loading</p>
 			</div>
-		)
+		);
 	}
 
 	if (error || !roadmapChanges) {
@@ -45,7 +45,7 @@ function ChangeGrid() {
 			<div className="">
 				<p>Error loading changes</p>
 			</div>
-		)
+		);
 	}
 
 	if (roadmapChanges.length === 0) {
@@ -53,13 +53,13 @@ function ChangeGrid() {
 			<div className="">
 				<p>No changes</p>
 			</div>
-		)
+		);
 	}
 
 	return (
 		<div className="max-w-4xl">
 			<h3 className="mb-4 text-2xl font-bold">Changes</h3>
-			<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+			<div className="grid grid-flow-row-dense grid-cols-1 gap-5 sm:grid-cols-2">
 				{roadmapChanges.map((change) => {
 					if (
 						change.type === "tab_added" ||
@@ -77,7 +77,7 @@ function ChangeGrid() {
 				})}
 			</div>
 		</div>
-	)
+	);
 }
 
 function RouteComponent() {
@@ -85,5 +85,5 @@ function RouteComponent() {
 		<div className="relative flex justify-center px-4 pt-24 pb-8">
 			<ChangeGrid />
 		</div>
-	)
+	);
 }
