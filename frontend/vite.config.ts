@@ -1,20 +1,19 @@
 import { defineConfig } from "vite";
 
-import tsconfigPaths from "vite-tsconfig-paths";
-import react from "@vitejs/plugin-react";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+	resolve: { tsconfigPaths: true },
 	plugins: [
-		tsconfigPaths({ projects: ["./tsconfig.json"] }),
 		tailwindcss(),
 		tanstackRouter(),
-		react({
-			babel: {
-				plugins: [["babel-plugin-react-compiler"]],
-			},
+		react(),
+		babel({
+			presets: [reactCompilerPreset()],
 		}),
 	],
 	appType: "spa",
