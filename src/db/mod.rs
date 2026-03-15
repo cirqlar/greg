@@ -2,7 +2,7 @@ use std::env;
 
 use libsql::{Builder, Connection, Database, OpenFlags};
 
-use crate::types::StringError;
+use crate::types::errors::StringError;
 
 pub async fn get_database() -> Database {
     let use_local = env::var("USE_LOCAL").unwrap_or("false".into());
