@@ -1,5 +1,7 @@
 use actix_web::{Scope, web};
 use log::{error, info};
+
+#[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 
 use crate::server::AppData;
@@ -27,6 +29,7 @@ pub(super) fn add_routes(scope: Scope) -> Scope {
         .service(routes::recheck::recheck)
 }
 
+#[cfg(feature = "scheduler")]
 pub(super) async fn add_tasks(
     scheduler: &JobScheduler,
     app_data: AppData,
