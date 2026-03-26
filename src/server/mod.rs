@@ -11,7 +11,7 @@ use libsql::Database;
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{JobScheduler, JobSchedulerError};
 
-mod db;
+pub mod db;
 mod roadmap;
 mod rss;
 mod shared;

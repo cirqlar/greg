@@ -111,14 +111,16 @@ fn write_migration_file(
     let text = format!(
         r#"use std::sync::Arc;
 
-use libsql::Transaction;
+use libsql::{{Transaction, params}};
 
 use crate::server::shared::DatabaseError;
 
 pub(super) const MIGRATION_NAME: &str = "{migration_name}";
 
 pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {{
-    todo!()
+    let _ = db.execute(&format!("SQL Query"), params!()).await?;
+
+    Ok(())
 }}"#,
         migration_name = migration_file_name
     );
