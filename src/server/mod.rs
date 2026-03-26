@@ -7,6 +7,7 @@ use actix_web::{
 use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
 use libsql::Database;
+use thiserror::Error;
 
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{JobScheduler, JobSchedulerError};
@@ -39,6 +40,26 @@ fn get_api_service() -> Scope {
     api_scope
 }
 
+#[derive(Debug, Error)]
+pub enum AppDataError {
+    #[error(transparent)]
+    Get(#[from] db::GetDatabaseError),
+    #[error(transparent)]
+    Connect(#[from] shared::DatabaseError),
+    #[error(transparent)]
+    Migration(#[from] db::ApplyMigrationError),
+}
+
+pub async fn get_app_data() -> Result<AppData, AppDataError> {
+    let app_db = db::get_database().await?;
+    db::apply_migrations(app_db.connect().map_err(shared::DatabaseError::from)?).await?;
+
+    let demo_db = db::get_demo_database().await?;
+    db::apply_migrations(demo_db.connect().map_err(shared::DatabaseError::from)?).await?;
+
+    Ok(web::Data::new(AppState { app_db, demo_db }))
+}
+
 #[cfg(feature = "scheduler")]
 pub async fn start_scheduler(app_data: AppData) -> Result<(), JobSchedulerError> {
     let scheduler = JobScheduler::new().await?;
@@ -49,7 +70,7 @@ pub async fn start_scheduler(app_data: AppData) -> Result<(), JobSchedulerError>
     Ok(())
 }
 
-pub async fn start_server(app_data: AppData) -> anyhow::Result<()> {
+pub async fn start_server(app_data: AppData) -> Result<(), actix_web::Error> {
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
