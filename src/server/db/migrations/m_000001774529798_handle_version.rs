@@ -8,6 +8,12 @@ use crate::server::shared::DatabaseError;
 pub(super) const MIGRATION_NAME: &str = "m_000001774529798_handle_version.rs";
 
 pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
+    let _ = db
+        .execute(&format!("DROP TABLE IF EXISTS {VERSION_T}"), params!())
+        .await?;
+
+    println!("We didn't reach this 2");
+
     // Add enabled and failed_count if not there
     // It shouldn't be possible to have one and not
     // the other as they're added at the same time
@@ -41,10 +47,6 @@ pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
             )
             .await?;
     }
-
-    let _ = db
-        .execute(&format!("DROP TABLE IF EXISTS {VERSION_T}"), params!())
-        .await?;
 
     Ok(())
 }

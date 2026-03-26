@@ -28,5 +28,5 @@ pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
         )
         .await?;
 
-    todo!()
+    Ok(())
 }
