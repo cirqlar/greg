@@ -19,6 +19,8 @@ pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
         .await?;
 
     if rows.next().await?.is_none() {
+        // TODO: would batch execute work on a transaction?
+
         let _ = db
             .execute(
                 &format!(
@@ -38,32 +40,6 @@ pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
                 params!(),
             )
             .await?;
-    }
-
-    let _ = db
-        .execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS `{VERSION_T}`(
-                    `id` INTEGER NOT NULL PRIMARY KEY,
-                    `version_number` INTEGER NOT NULL
-                )"
-            ),
-            params!(),
-        )
-        .await?;
-
-    let mut res = db
-        .query(&format!("SELECT * FROM {VERSION_T} WHERE id = ?1"), [1])
-        .await?;
-
-    let mut version: u32 = 1;
-    if let Some(row) = res.next().await? {
-        version = row.get(1)?;
-    };
-
-    if version < 2 {
-        // add fields
-        todo!()
     }
 
     let _ = db
