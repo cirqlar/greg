@@ -181,12 +181,18 @@ pub async fn apply_migrations(db: Connection) -> Result<(), ApplyMigrationError>
 
 #[cfg(test)]
 mod tests {
+    use rstest::fixture;
+    use rstest::rstest;
+
     use super::*;
 
-    #[test]
-    fn all_migrations_are_unique() {
-        let migrations = get_migrations();
+    #[fixture]
+    fn migrations() -> Vec<Migration> {
+        get_migrations()
+    }
 
+    #[rstest]
+    fn all_migrations_are_unique(migrations: Vec<Migration>) {
         let mut found = Vec::with_capacity(migrations.len());
 
         for migration in migrations {
