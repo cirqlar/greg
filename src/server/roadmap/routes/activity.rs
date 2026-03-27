@@ -1,39 +1,37 @@
-use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
+use actix_web::{HttpRequest, get, web};
 use log::{error, info};
 
 use crate::AppData;
 use crate::auth::{is_logged_in, return_password_error};
 use crate::roadmap::queries::activity;
-use crate::shared::{Failure, PaginationQuery};
+use crate::roadmap::types::RoadmapActivity;
+use crate::shared::{ApiResponse, Failure, PaginationQuery, Success};
 
 #[get("/roadmap_activity")]
 pub async fn get_roadmap_activity(
     data: AppData,
     query: web::Query<PaginationQuery>,
     req: HttpRequest,
-) -> impl Responder {
+) -> ApiResponse<Vec<RoadmapActivity>> {
     let db = if query.demo {
         data.demo_db.connect().unwrap()
     } else {
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await {
-        match activity::get_roadmap_activity(db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
+    if query.demo || is_logged_in(&req, db.clone()).await? {
+        activity::get_roadmap_activity(db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
             .await
-        {
-            Ok(activities) => {
+            .map(|activities| {
                 info!("Got roadmap activity");
-                HttpResponse::Ok().json(activities)
-            }
-            Err(err) => {
+
+                Success::ok(activities)
+            })
+            .map_err(|err| {
                 error!("Failed to get roadmap activity. err: {err:?}");
-                (Failure {
-                    message: format!("{err}"),
-                })
-                .server_error()
-            }
-        }
+
+                Failure::server_error(err)
+            })
     } else {
         return_password_error()
     }

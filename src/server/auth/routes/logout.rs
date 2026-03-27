@@ -1,15 +1,13 @@
-use actix_web::{HttpResponse, Responder, delete};
+use actix_web::delete;
 
 use crate::auth::make_auth_cookie;
-use crate::shared::Success;
+use crate::shared::{ApiResponse, Success};
 
 #[delete("/logout")]
-pub async fn logout() -> impl Responder {
-    let mut c = make_auth_cookie("");
+pub async fn logout() -> ApiResponse {
+    let mut c = make_auth_cookie("".into());
 
     c.make_removal();
 
-    HttpResponse::Ok().cookie(c).json(Success {
-        message: "Successfully logged out".into(),
-    })
+    Ok(Success::ok_message("Successfully logged out".into()).with_cookie(c))
 }
