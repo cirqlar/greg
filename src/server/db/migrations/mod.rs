@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 use super::tables::MIGRATIONS_T;
 use super::types::{DbMigration, Migration};
-use crate::server::shared::DatabaseError;
+use crate::shared::DatabaseError;
 
 // migration_import_start
 mod m_000001774527605_add_sources;
@@ -263,7 +263,7 @@ mod tests {
 
     #[fixture]
     async fn v1_db(#[future(awt)] empty_db: Database) -> Connection {
-        use crate::server::db::tables::{
+        use crate::db::tables::{
             ACTIVITIES_T, LOGINS_T, R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T,
             R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T, SOURCES_T, VERSION_T,
         };
@@ -380,7 +380,7 @@ mod tests {
 
     #[fixture]
     async fn v2_db(#[future(awt)] v1_db: Connection) -> Connection {
-        use crate::server::db::tables::{SOURCES_T, VERSION_T};
+        use crate::db::tables::{SOURCES_T, VERSION_T};
 
         #[rustfmt::skip]
         let stmnts = [

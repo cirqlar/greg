@@ -1,9 +1,9 @@
 use libsql::{Connection, de, params};
 use time::{OffsetDateTime, ext::NumericalDuration};
 
-use crate::server::db::tables::SOURCES_T;
-use crate::server::rss::Source;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::SOURCES_T;
+use crate::rss::Source;
+use crate::shared::DatabaseError;
 
 pub async fn get_sources(db: Connection) -> Result<Vec<Source>, DatabaseError> {
     let mut result = db

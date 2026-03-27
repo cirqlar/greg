@@ -4,7 +4,7 @@ use log::{error, info};
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 
-use crate::server::AppData;
+use crate::AppData;
 
 mod queries;
 mod routes;

@@ -3,9 +3,9 @@ use std::{collections::HashMap, env};
 use libsql::Connection;
 use thiserror::Error;
 
-use crate::server::roadmap::queries::tabs;
-use crate::server::roadmap::types::{Roadmap, WebRoadmap};
-use crate::server::roadmap::utils::clean_description;
+use crate::roadmap::queries::tabs;
+use crate::roadmap::types::{Roadmap, WebRoadmap};
+use crate::roadmap::utils::clean_description;
 
 const JSON_START_LANDMARK: &str = "window.pbData";
 const JSON_END_LANDMARK: &str = "</script>";
@@ -19,7 +19,7 @@ pub enum WebError {
     #[error("fialed to parse roadmap json")]
     Json(#[from] serde_json::Error),
     #[error("fialed to get watched tabs")]
-    WatchedTabs(#[from] crate::server::shared::DatabaseError),
+    WatchedTabs(#[from] crate::shared::DatabaseError),
 }
 
 async fn get_roadmap_json() -> Result<String, WebError> {

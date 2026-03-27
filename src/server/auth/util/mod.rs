@@ -3,8 +3,8 @@ use libsql::Connection;
 use log::{error, info};
 use time::OffsetDateTime;
 
-use crate::server::db::tables::LOGINS_T;
-use crate::server::shared::Failure;
+use crate::db::tables::LOGINS_T;
+use crate::shared::Failure;
 
 pub const LOGGED_IN_COOKIE: &str = "logged_in";
 

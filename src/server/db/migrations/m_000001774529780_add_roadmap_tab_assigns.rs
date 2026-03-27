@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use libsql::{Transaction, params};
 
-use crate::server::db::tables::R_TAB_ASSIGNS_T;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::R_TAB_ASSIGNS_T;
+use crate::shared::DatabaseError;
 
 pub(super) const MIGRATION_NAME: &str = "m_000001774529780_add_roadmap_tab_assigns.rs";
 

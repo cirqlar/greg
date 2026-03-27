@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use libsql::{Transaction, params};
 
-use crate::server::db::tables::ACTIVITIES_T;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::ACTIVITIES_T;
+use crate::shared::DatabaseError;
 
 pub(super) const MIGRATION_NAME: &str = "m_000001774528994_add_activities.rs";
 

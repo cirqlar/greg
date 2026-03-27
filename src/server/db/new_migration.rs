@@ -113,7 +113,7 @@ fn write_migration_file(
 
 use libsql::{{Transaction, params}};
 
-use crate::server::shared::DatabaseError;
+use crate::shared::DatabaseError;
 
 pub(super) const MIGRATION_NAME: &str = "{migration_name}";
 

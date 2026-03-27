@@ -1,9 +1,9 @@
 use libsql::Transaction;
 use time::OffsetDateTime;
 
-use crate::server::db::tables::{R_TAB_ASSIGNS_T, R_TABS_T};
-use crate::server::roadmap::types::RTab;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_TAB_ASSIGNS_T, R_TABS_T};
+use crate::roadmap::types::RTab;
+use crate::shared::DatabaseError;
 
 pub async fn save_tab_tx(db: &Transaction, tab: &RTab) -> Result<u32, DatabaseError> {
     let mut result = db

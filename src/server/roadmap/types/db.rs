@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::server::shared::timestamp::{deserialize_timestamp, serialize_timestamp};
+use crate::shared::timestamp::{deserialize_timestamp, serialize_timestamp};
 
 #[derive(Serialize, Deserialize)]
 pub struct RoadmapActivity {

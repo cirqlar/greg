@@ -1,8 +1,8 @@
 use libsql::{Connection, de};
 
-use crate::server::db::tables::{R_ACTIVITIES_T, R_CHANGES_T};
-use crate::server::roadmap::types::RoadmapActivity;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_ACTIVITIES_T, R_CHANGES_T};
+use crate::roadmap::types::RoadmapActivity;
+use crate::shared::DatabaseError;
 
 pub async fn get_roadmap_activity(
     db: Connection,

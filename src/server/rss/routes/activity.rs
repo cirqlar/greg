@@ -1,11 +1,11 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, delete, get, web};
 use log::{error, info, warn};
 
-use crate::server::AppData;
-use crate::server::auth::{is_logged_in, return_password_error};
-use crate::server::rss::queries::activity;
-use crate::server::shared::PaginationQuery;
-use crate::server::shared::{Failure, Success};
+use crate::AppData;
+use crate::auth::{is_logged_in, return_password_error};
+use crate::rss::queries::activity;
+use crate::shared::PaginationQuery;
+use crate::shared::{Failure, Success};
 
 #[get("/activity")]
 pub async fn get_activity(

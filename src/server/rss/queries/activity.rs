@@ -1,8 +1,8 @@
 use libsql::{Connection, de, params};
 
-use crate::server::db::tables::{ACTIVITIES_T, SOURCES_T};
-use crate::server::rss::Activity;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{ACTIVITIES_T, SOURCES_T};
+use crate::rss::Activity;
+use crate::shared::DatabaseError;
 
 pub async fn get_activity(
     db: Connection,

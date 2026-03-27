@@ -1,9 +1,9 @@
 use libsql::Transaction;
 use time::OffsetDateTime;
 
-use crate::server::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T};
-use crate::server::roadmap::types::RCard;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T};
+use crate::roadmap::types::RCard;
+use crate::shared::DatabaseError;
 
 pub async fn save_card_tx(db: &Transaction, card: &RCard) -> Result<u32, DatabaseError> {
     let mut result = db

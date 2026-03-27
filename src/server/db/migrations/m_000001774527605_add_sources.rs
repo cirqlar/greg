@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use libsql::{Transaction, params};
 
-use crate::server::db::tables::SOURCES_T;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::SOURCES_T;
+use crate::shared::DatabaseError;
 
 pub(super) const MIGRATION_NAME: &str = "m_000001774527605_add_sources.rs";
 

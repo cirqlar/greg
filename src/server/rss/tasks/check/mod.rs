@@ -8,7 +8,7 @@ mod handle_posts;
 
 pub use check_source::get_source;
 
-use crate::server::{AppData, rss::queries::sources::get_sources};
+use crate::{AppData, rss::queries::sources::get_sources};
 
 #[derive(Error, Debug)]
 pub enum SubTaskError {
@@ -21,7 +21,7 @@ pub enum SubTaskError {
 #[derive(Error, Debug)]
 pub enum CheckRssError {
     #[error(transparent)]
-    Database(#[from] crate::server::shared::DatabaseError),
+    Database(#[from] crate::shared::DatabaseError),
     #[error("{} sources failed", .0.len())]
     Source(Vec<SubTaskError>),
 }

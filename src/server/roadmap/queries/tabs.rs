@@ -1,9 +1,9 @@
 use libsql::{Connection, de, params};
 use time::OffsetDateTime;
 
-use crate::server::db::tables::{R_ACTIVITIES_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T};
-use crate::server::roadmap::types::{RTab, RoadmapActivity, RoadmapWatchedTab};
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_ACTIVITIES_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T};
+use crate::roadmap::types::{RTab, RoadmapActivity, RoadmapWatchedTab};
+use crate::shared::DatabaseError;
 
 pub async fn get_watched_tabs(db: Connection) -> Result<Vec<RoadmapWatchedTab>, DatabaseError> {
     let mut result = db

@@ -6,10 +6,10 @@ use log::{error, info, warn};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::server::AppData;
-use crate::server::auth::queries::login::save_login_id;
-use crate::server::auth::{is_logged_in, make_auth_cookie, return_password_error};
-use crate::server::shared::{Failure, Success};
+use crate::AppData;
+use crate::auth::queries::login::save_login_id;
+use crate::auth::{is_logged_in, make_auth_cookie, return_password_error};
+use crate::shared::{Failure, Success};
 
 #[get("/check-logged-in")]
 pub async fn check_logged_in(data: AppData, req: HttpRequest) -> impl Responder {

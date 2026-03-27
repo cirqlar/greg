@@ -3,7 +3,7 @@ use std::env::{VarError, var};
 use libsql::{Builder, Database, OpenFlags};
 use thiserror::Error;
 
-use crate::server::shared::DatabaseError;
+use crate::shared::DatabaseError;
 
 #[derive(Debug, Error)]
 pub enum GetDatabaseError {

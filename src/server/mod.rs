@@ -1,23 +1,25 @@
 use actix_web::{
-    Scope,
+    App, HttpServer, Scope,
     dev::HttpServiceFactory,
+    middleware::Logger,
     web::{self, ServiceConfig, scope},
 };
 use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
+use dotenvy::dotenv;
 use libsql::Database;
 use thiserror::Error;
 
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{JobScheduler, JobSchedulerError};
 
-mod auth;
-pub mod db;
-mod mail;
-mod misc;
-mod roadmap;
-mod rss;
-mod shared;
+pub(crate) mod auth;
+pub(crate) mod db;
+pub(crate) mod mail;
+pub(crate) mod misc;
+pub(crate) mod roadmap;
+pub(crate) mod rss;
+pub(crate) mod shared;
 
 pub struct AppState {
     pub app_db: Database,
@@ -74,6 +76,19 @@ pub async fn start_scheduler(app_data: AppData) -> Result<(), JobSchedulerError>
     Ok(())
 }
 
+#[derive(Debug, Error)]
+pub enum AppError {
+    #[error(transparent)]
+    Data(#[from] AppDataError),
+
+    #[cfg(feature = "scheduler")]
+    #[error("Error setting up schedules")]
+    Scheduler(#[from] tokio_cron_scheduler::JobSchedulerError),
+
+    #[error("Error starting server")]
+    Server(#[from] std::io::Error),
+}
+
 pub fn config_app(app_data: AppData) -> Box<dyn Fn(&mut ServiceConfig)> {
     Box::new(move |cfg| {
         cfg.app_data(app_data.clone())
@@ -81,4 +96,27 @@ pub fn config_app(app_data: AppData) -> Box<dyn Fn(&mut ServiceConfig)> {
             .service(get_api_service())
             .service(get_spa_service());
     })
+}
+
+pub async fn run_app() -> Result<(), AppError> {
+    dotenv().ok();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let app_data = get_app_data().await?;
+
+    #[cfg(feature = "scheduler")]
+    {
+        start_scheduler(app_data.clone()).await?;
+    }
+
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Logger::default())
+            .configure(config_app(app_data.clone()))
+    })
+    .bind(("0.0.0.0", 10000))?
+    .run()
+    .await?;
+
+    Ok(())
 }

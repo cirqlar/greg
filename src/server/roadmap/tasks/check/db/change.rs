@@ -1,8 +1,8 @@
 use libsql::Transaction;
 use time::OffsetDateTime;
 
-use crate::server::db::tables::R_CHANGES_T;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::R_CHANGES_T;
+use crate::shared::DatabaseError;
 
 pub struct ChangeInfo {
     pub activity_id: u32,

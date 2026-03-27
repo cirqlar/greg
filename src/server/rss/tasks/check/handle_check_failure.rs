@@ -5,12 +5,12 @@ use log::error;
 use thiserror::Error;
 
 use super::check_source::CheckError;
-use crate::server::db::tables::SOURCES_T;
-use crate::server::rss::Source;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::SOURCES_T;
+use crate::rss::Source;
+use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
-use crate::server::mail::send_email_with_cient;
+use crate::mail::send_email_with_cient;
 
 #[derive(Debug, Error)]
 pub enum HandleFailureError {

@@ -1,8 +1,8 @@
 use libsql::{Connection, de};
 
-use crate::server::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TABS_T};
-use crate::server::roadmap::types::RDBChange;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TABS_T};
+use crate::roadmap::types::RDBChange;
+use crate::shared::DatabaseError;
 
 pub async fn get_roadmap_changes(
     db: Connection,

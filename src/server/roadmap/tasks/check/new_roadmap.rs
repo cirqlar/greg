@@ -5,8 +5,8 @@ use log::info;
 use time::OffsetDateTime;
 
 use super::db::{roadmap, tabs};
-use crate::server::roadmap::types::Roadmap;
-use crate::server::shared::DatabaseError;
+use crate::roadmap::types::Roadmap;
+use crate::shared::DatabaseError;
 
 pub async fn save_new_roadmap(db: &Transaction, roadmap: Roadmap) -> Result<(), DatabaseError> {
     let start_time = OffsetDateTime::now_utc();

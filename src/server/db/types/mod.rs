@@ -5,8 +5,8 @@ use libsql::Transaction;
 use serde::Deserialize;
 use time::OffsetDateTime;
 
-use crate::server::shared::DatabaseError;
-use crate::server::shared::timestamp::deserialize_timestamp;
+use crate::shared::DatabaseError;
+use crate::shared::timestamp::deserialize_timestamp;
 
 pub(super) type MigrationFunction = Box<
     dyn Fn(

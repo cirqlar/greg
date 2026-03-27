@@ -4,11 +4,11 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 use super::check_source::CheckReturn;
-use crate::server::db::tables::{ACTIVITIES_T, SOURCES_T};
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{ACTIVITIES_T, SOURCES_T};
+use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
-use crate::server::mail::send_email;
+use crate::mail::send_email;
 
 #[derive(Debug, Error)]
 pub enum PostsError {

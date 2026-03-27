@@ -5,9 +5,9 @@ use log::info;
 use time::OffsetDateTime;
 
 use super::cards::{PartAssignInfo, save_card_and_assignment};
-use crate::server::db::tables::R_ACTIVITIES_T;
-use crate::server::roadmap::types::Roadmap;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::R_ACTIVITIES_T;
+use crate::roadmap::types::Roadmap;
+use crate::shared::DatabaseError;
 
 pub async fn save_all_cards_sync_tx(
     db: &Transaction,

@@ -3,7 +3,7 @@ use log::{error, info, warn};
 use thiserror::Error;
 use time::OffsetDateTime;
 
-use crate::server::rss::Source;
+use crate::rss::Source;
 
 #[derive(Error, Debug)]
 pub enum CheckError {

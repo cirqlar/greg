@@ -1,10 +1,10 @@
 use actix_web::{HttpRequest, Responder, post};
 use log::{error, info};
 
-use crate::server::AppData;
-use crate::server::auth::{is_logged_in, return_password_error};
-use crate::server::rss::tasks::check::check_rss;
-use crate::server::shared::{Failure, Success};
+use crate::AppData;
+use crate::auth::{is_logged_in, return_password_error};
+use crate::rss::tasks::check::check_rss;
+use crate::shared::{Failure, Success};
 
 #[post("/recheck")]
 pub async fn recheck(data: AppData, req: HttpRequest) -> impl Responder {

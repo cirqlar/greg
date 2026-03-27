@@ -5,8 +5,8 @@ use log::error;
 use thiserror::Error;
 
 use super::db::{cards, change, roadmap, tabs};
-use crate::server::roadmap::types::{CardChange, RChange, Roadmap, TabCardsChange, TabChange};
-use crate::server::shared::DatabaseError;
+use crate::roadmap::types::{CardChange, RChange, Roadmap, TabCardsChange, TabChange};
+use crate::shared::DatabaseError;
 
 pub trait SaveOrNotify {
     fn should_notify(&self) -> bool;

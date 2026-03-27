@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use libsql::{Connection, de, params};
 
 use super::tabs::get_roadmap_tabs;
-use crate::server::db::tables::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
-use crate::server::roadmap::types::{RCard, Roadmap, RoadmapActivity};
-use crate::server::shared::DatabaseError;
+use crate::db::tables::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
+use crate::roadmap::types::{RCard, Roadmap, RoadmapActivity};
+use crate::shared::DatabaseError;
 
 pub async fn get_most_recent_roadmap(db: Connection) -> Result<Option<Roadmap>, DatabaseError> {
     let mut result = db

@@ -6,13 +6,13 @@ use log::{error, info, warn};
 use thiserror::Error;
 use time::OffsetDateTime;
 
-use crate::server::AppData;
-use crate::server::roadmap::queries::roadmap;
-use crate::server::roadmap::types::RChange;
-use crate::server::shared::DatabaseError;
+use crate::AppData;
+use crate::roadmap::queries::roadmap;
+use crate::roadmap::types::RChange;
+use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
-use crate::server::mail::send_email;
+use crate::mail::send_email;
 
 mod changes;
 mod compare;

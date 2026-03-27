@@ -1,7 +1,7 @@
 use actix_web::{HttpResponse, Responder, delete};
 
-use crate::server::auth::make_auth_cookie;
-use crate::server::shared::Success;
+use crate::auth::make_auth_cookie;
+use crate::shared::Success;
 
 #[delete("/logout")]
 pub async fn logout() -> impl Responder {

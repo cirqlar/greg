@@ -2,12 +2,12 @@ use actix_web::{HttpRequest, HttpResponse, Responder, delete, get, post, web};
 use log::{error, info, warn};
 use serde::Deserialize;
 
-use crate::server::AppData;
-use crate::server::auth::{is_logged_in, return_password_error};
-use crate::server::rss::queries::sources;
-use crate::server::rss::tasks::check::get_source;
-use crate::server::shared::Query;
-use crate::server::shared::{Failure, Success};
+use crate::AppData;
+use crate::auth::{is_logged_in, return_password_error};
+use crate::rss::queries::sources;
+use crate::rss::tasks::check::get_source;
+use crate::shared::Query;
+use crate::shared::{Failure, Success};
 
 #[get("/sources")]
 pub async fn get_sources(

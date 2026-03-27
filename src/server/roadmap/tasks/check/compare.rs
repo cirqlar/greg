@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::server::roadmap::types::{CardChange, RChange, Roadmap, TabCardsChange, TabChange};
+use crate::roadmap::types::{CardChange, RChange, Roadmap, TabCardsChange, TabChange};
 
 pub fn compare_roadmaps(previous: &Roadmap, current: &Roadmap) -> Vec<RChange> {
     info!("Started roadmap comparison");

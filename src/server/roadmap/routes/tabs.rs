@@ -1,10 +1,10 @@
 use actix_web::{HttpRequest, HttpResponse, Responder, delete, get, post, web};
 use log::{error, info, warn};
 
-use crate::server::AppData;
-use crate::server::auth::{is_logged_in, return_password_error};
-use crate::server::roadmap::queries::tabs;
-use crate::server::shared::{Failure, Query, Success};
+use crate::AppData;
+use crate::auth::{is_logged_in, return_password_error};
+use crate::roadmap::queries::tabs;
+use crate::shared::{Failure, Query, Success};
 
 #[get("/most_recent_tabs")]
 pub async fn get_most_recent_tabs(

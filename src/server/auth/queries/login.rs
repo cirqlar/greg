@@ -2,8 +2,8 @@ use libsql::Connection;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::server::db::tables::LOGINS_T;
-use crate::server::shared::DatabaseError;
+use crate::db::tables::LOGINS_T;
+use crate::shared::DatabaseError;
 
 pub async fn save_login_id(db: Connection, id: &Uuid) -> Result<u64, DatabaseError> {
     db.execute(
