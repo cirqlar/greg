@@ -8,11 +8,10 @@ use crate::server::shared::DatabaseError;
 pub(super) const MIGRATION_NAME: &str = "m_000001774529798_handle_version.rs";
 
 pub(super) async fn run(db: Arc<Transaction>) -> Result<(), DatabaseError> {
+    // Drop Version before alter as doing it after sometimes causes a database closed error
     let _ = db
         .execute(&format!("DROP TABLE IF EXISTS {VERSION_T}"), params!())
         .await?;
-
-    println!("We didn't reach this 2");
 
     // Add enabled and failed_count if not there
     // It shouldn't be possible to have one and not
