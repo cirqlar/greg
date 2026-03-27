@@ -1,4 +1,3 @@
-pub(super) mod auth;
 pub(super) mod errors;
 pub(super) mod timestamp;
 

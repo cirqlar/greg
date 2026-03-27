@@ -3,16 +3,22 @@ use libsql::Connection;
 use log::{error, info};
 use time::OffsetDateTime;
 
-use super::Failure;
-use crate::{db::LOGINS_T, types::LOGGED_IN_COOKIE};
+use crate::server::db::tables::LOGINS_T;
+use crate::server::shared::Failure;
 
-pub fn return_password_error() -> HttpResponse {
-    let mut c = Cookie::build(LOGGED_IN_COOKIE, "")
+pub const LOGGED_IN_COOKIE: &str = "logged_in";
+
+pub fn make_auth_cookie<'a>(value: &'a str) -> Cookie<'a> {
+    Cookie::build(LOGGED_IN_COOKIE, value)
         .path("/")
         .secure(true)
         .http_only(true)
         .expires(None)
-        .finish();
+        .finish()
+}
+
+pub fn return_password_error() -> HttpResponse {
+    let mut c = make_auth_cookie("");
 
     c.make_removal();
 

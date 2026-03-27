@@ -3,10 +3,10 @@ use log::{error, info, warn};
 use serde::Deserialize;
 
 use crate::server::AppData;
+use crate::server::auth::{is_logged_in, return_password_error};
 use crate::server::rss::queries::sources;
 use crate::server::rss::tasks::check::get_source;
 use crate::server::shared::Query;
-use crate::server::shared::auth::{is_logged_in, return_password_error};
 use crate::server::shared::{Failure, Success};
 
 #[get("/sources")]

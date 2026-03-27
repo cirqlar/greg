@@ -1,7 +1,7 @@
 use libsql::Transaction;
 use time::OffsetDateTime;
 
-use crate::db::{R_TAB_ASSIGNS_T, R_TABS_T};
+use crate::server::db::tables::{R_TAB_ASSIGNS_T, R_TABS_T};
 use crate::server::roadmap::types::RTab;
 use crate::server::shared::DatabaseError;
 

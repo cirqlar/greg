@@ -5,9 +5,12 @@ use log::error;
 use thiserror::Error;
 
 use super::check_source::CheckError;
-use crate::db::SOURCES_T;
+use crate::server::db::tables::SOURCES_T;
 use crate::server::rss::Source;
 use crate::server::shared::DatabaseError;
+
+#[cfg(feature = "mail")]
+use crate::server::mail::send_email_with_cient;
 
 #[derive(Debug, Error)]
 pub enum HandleFailureError {
@@ -47,7 +50,7 @@ pub async fn handle_check_failure(
         );
 
         #[cfg(feature = "mail")]
-		let _ = crate::queries::mail::send_email_with_cient(
+		let _ = send_email_with_cient(
 			client,
 			"Source disabled",
 			&format!(

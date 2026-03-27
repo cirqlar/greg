@@ -1,6 +1,6 @@
 use libsql::{Connection, de};
 
-use crate::db::{R_ACTIVITIES_T, R_CHANGES_T};
+use crate::server::db::tables::{R_ACTIVITIES_T, R_CHANGES_T};
 use crate::server::roadmap::types::RoadmapActivity;
 use crate::server::shared::DatabaseError;
 

@@ -1,6 +1,6 @@
 use libsql::{Connection, de, params};
 
-use crate::db::{ACTIVITIES_T, SOURCES_T};
+use crate::server::db::tables::{ACTIVITIES_T, SOURCES_T};
 use crate::server::rss::Activity;
 use crate::server::shared::DatabaseError;
 

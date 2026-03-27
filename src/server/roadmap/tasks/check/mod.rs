@@ -11,6 +11,9 @@ use crate::server::roadmap::queries::roadmap;
 use crate::server::roadmap::types::RChange;
 use crate::server::shared::DatabaseError;
 
+#[cfg(feature = "mail")]
+use crate::server::mail::send_email;
+
 mod changes;
 mod compare;
 mod db;
@@ -129,7 +132,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
             // send email that there are changes
 
             let base_url = env::var("VITE_BASE_URL").unwrap_or("Missing base url".into());
-            let res = crate::queries::mail::send_email(
+            let res = send_email(
                 &format!("{notify_count} new changes on roadmap"),
                 &format!("{base_url}/roadmap/{new_roadmap_id}"),
                 &format!(r#"<a href="{base_url}/roadmap/{new_roadmap_id}">View changes</a>"#),

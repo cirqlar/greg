@@ -1,6 +1,6 @@
 use libsql::{Connection, de};
 
-use crate::db::{R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TABS_T};
+use crate::server::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TABS_T};
 use crate::server::roadmap::types::RDBChange;
 use crate::server::shared::DatabaseError;
 

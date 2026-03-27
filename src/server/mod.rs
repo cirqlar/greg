@@ -12,7 +12,10 @@ use thiserror::Error;
 #[cfg(feature = "scheduler")]
 use tokio_cron_scheduler::{JobScheduler, JobSchedulerError};
 
+mod auth;
 pub mod db;
+mod mail;
+mod misc;
 mod roadmap;
 mod rss;
 mod shared;
@@ -36,6 +39,8 @@ fn get_api_service() -> Scope {
     let mut api_scope = scope("/api");
     api_scope = rss::add_routes(api_scope);
     api_scope = roadmap::add_routes(api_scope);
+    api_scope = auth::add_routes(api_scope);
+    api_scope = misc::add_routes(api_scope);
 
     api_scope
 }

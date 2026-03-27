@@ -2,8 +2,8 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use log::{error, info};
 
 use crate::server::AppData;
+use crate::server::auth::{is_logged_in, return_password_error};
 use crate::server::roadmap::queries::activity;
-use crate::server::shared::auth::{is_logged_in, return_password_error};
 use crate::server::shared::{Failure, PaginationQuery};
 
 #[get("/roadmap_activity")]

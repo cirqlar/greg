@@ -1,7 +1,7 @@
 use libsql::Transaction;
 use time::OffsetDateTime;
 
-use crate::db::R_CHANGES_T;
+use crate::server::db::tables::R_CHANGES_T;
 use crate::server::shared::DatabaseError;
 
 pub struct ChangeInfo {

@@ -1,7 +1,7 @@
 use libsql::{Connection, de, params};
 use time::OffsetDateTime;
 
-use crate::db::{R_ACTIVITIES_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T};
+use crate::server::db::tables::{R_ACTIVITIES_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T};
 use crate::server::roadmap::types::{RTab, RoadmapActivity, RoadmapWatchedTab};
 use crate::server::shared::DatabaseError;
 

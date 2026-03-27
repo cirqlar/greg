@@ -2,8 +2,8 @@ use actix_web::{HttpRequest, Responder, post};
 use log::{error, info};
 
 use crate::server::AppData;
+use crate::server::auth::{is_logged_in, return_password_error};
 use crate::server::roadmap::tasks::check::check_roadmap;
-use crate::server::shared::auth::{is_logged_in, return_password_error};
 use crate::server::shared::{Failure, Success};
 
 #[post("/recheck_roadmap")]

@@ -4,8 +4,11 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 use super::check_source::CheckReturn;
-use crate::db::{ACTIVITIES_T, SOURCES_T};
+use crate::server::db::tables::{ACTIVITIES_T, SOURCES_T};
 use crate::server::shared::DatabaseError;
+
+#[cfg(feature = "mail")]
+use crate::server::mail::send_email;
 
 #[derive(Debug, Error)]
 pub enum PostsError {
@@ -64,7 +67,7 @@ pub async fn handle_posts(
             .map_err(DatabaseError::from)?;
 
         #[cfg(feature = "mail")]
-        let _ = crate::queries::mail::send_email(
+        let _ = send_email(
             &format!("{} - {}", post.title, rss_info.channel_title),
             &format!("Source: {}\n\n{}", post.url, post.body),
             &format!(

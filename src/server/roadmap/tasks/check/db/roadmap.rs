@@ -5,7 +5,7 @@ use log::info;
 use time::OffsetDateTime;
 
 use super::cards::{PartAssignInfo, save_card_and_assignment};
-use crate::db::R_ACTIVITIES_T;
+use crate::server::db::tables::R_ACTIVITIES_T;
 use crate::server::roadmap::types::Roadmap;
 use crate::server::shared::DatabaseError;
 

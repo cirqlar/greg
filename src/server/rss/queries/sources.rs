@@ -1,7 +1,7 @@
 use libsql::{Connection, de, params};
 use time::{OffsetDateTime, ext::NumericalDuration};
 
-use crate::db::SOURCES_T;
+use crate::server::db::tables::SOURCES_T;
 use crate::server::rss::Source;
 use crate::server::shared::DatabaseError;
 

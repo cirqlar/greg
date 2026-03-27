@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use libsql::{Connection, de, params};
 
 use super::tabs::get_roadmap_tabs;
-use crate::db::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
+use crate::server::db::tables::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
 use crate::server::roadmap::types::{RCard, Roadmap, RoadmapActivity};
 use crate::server::shared::DatabaseError;
 
