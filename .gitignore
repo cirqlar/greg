@@ -29,3 +29,4 @@ dist-ssr
 
 # Custom
 /migration_tool
+**/**_backup.db
