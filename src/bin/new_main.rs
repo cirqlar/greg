@@ -1,6 +1,7 @@
+use actix_web::{App, HttpServer, middleware::Logger};
 use dotenvy::dotenv;
 
-use greg::server::{AppDataError, get_app_data, start_server};
+use greg::server::{AppDataError, config_app, get_app_data};
 
 #[cfg(feature = "scheduler")]
 use greg::server::start_scheduler;
@@ -16,7 +17,7 @@ enum AppError {
     Scheduler(#[from] tokio_cron_scheduler::JobSchedulerError),
 
     #[error("Error starting server")]
-    Server(#[from] actix_web::Error),
+    Server(#[from] std::io::Error),
 }
 
 #[tokio::main]
@@ -31,7 +32,14 @@ async fn main() -> Result<(), AppError> {
         start_scheduler(app_data.clone()).await?;
     }
 
-    start_server(app_data).await?;
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Logger::default())
+            .configure(config_app(app_data.clone()))
+    })
+    .bind(("0.0.0.0", 10000))?
+    .run()
+    .await?;
 
     Ok(())
 }

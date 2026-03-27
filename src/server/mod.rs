@@ -1,8 +1,7 @@
 use actix_web::{
-    App, HttpServer, Scope,
+    Scope,
     dev::HttpServiceFactory,
-    middleware::Logger,
-    web::{self, scope},
+    web::{self, ServiceConfig, scope},
 };
 use actix_web_httpauth::extractors::basic;
 use actix_web_lab::web::spa;
@@ -75,18 +74,11 @@ pub async fn start_scheduler(app_data: AppData) -> Result<(), JobSchedulerError>
     Ok(())
 }
 
-pub async fn start_server(app_data: AppData) -> Result<(), actix_web::Error> {
-    HttpServer::new(move || {
-        App::new()
-            .wrap(Logger::default())
-            .app_data(app_data.clone())
+pub fn config_app(app_data: AppData) -> Box<dyn Fn(&mut ServiceConfig)> {
+    Box::new(move |cfg| {
+        cfg.app_data(app_data.clone())
             .app_data(basic::Config::default().realm("Restricted"))
             .service(get_api_service())
-            .service(get_spa_service())
+            .service(get_spa_service());
     })
-    .bind(("0.0.0.0", 10000))?
-    .run()
-    .await?;
-
-    Ok(())
 }
