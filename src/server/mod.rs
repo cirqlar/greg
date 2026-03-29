@@ -37,13 +37,11 @@ fn get_spa_service() -> impl HttpServiceFactory {
 }
 
 fn get_api_service() -> Scope {
-    let mut api_scope = scope("/api");
-    api_scope = rss::add_routes(api_scope);
-    api_scope = roadmap::add_routes(api_scope);
-    api_scope = auth::add_routes(api_scope);
-    api_scope = misc::add_routes(api_scope);
-
-    api_scope
+    scope("/api")
+        .service(rss::get_routes())
+        .service(roadmap::get_routes())
+        .service(auth::get_routes())
+        .service(misc::get_routes())
 }
 
 #[derive(Debug, Error)]

@@ -66,7 +66,7 @@ pub async fn get_watched_tabs(
     }
 }
 
-#[post("/watched_tabs/add/{tab_id}")]
+#[post("/watched_tabs/{tab_id}")]
 pub async fn add_watched_tab(
     path: web::Path<String>,
     data: AppData,

@@ -13,9 +13,7 @@ export function useActivity(sourceId?: number, demo?: boolean) {
 		queryKey: ["activity", sourceId, demo ?? false],
 		queryFn: (): Promise<TActivity[]> =>
 			fetch(
-				"/api/activity" +
-					(sourceId ? `/${sourceId}` : "") +
-					(demo ? "?demo=true" : ""),
+				`/api/rss${sourceId ? `/source/${sourceId}` : ""}/activity${demo ? "?demo=true" : ""}`,
 			).then(handleFetchResponse("Error fetching activities")),
 	});
 }
@@ -34,7 +32,7 @@ export function useInfiniteActivity(
 			if (demo) searchParams.append("demo", "true");
 
 			return fetch(
-				`/api/activity${sourceId ? `/${sourceId}` : ""}?${searchParams.toString()}`,
+				`/api/rss${sourceId ? `/source/${sourceId}` : ""}/activity?${searchParams.toString()}`,
 			).then(handleFetchResponse("Error fetching activities"));
 		},
 		initialPageParam: 0,
@@ -53,7 +51,7 @@ export function useRefreshRSS() {
 
 	return useMutation({
 		mutationFn: () =>
-			fetch("/api/recheck", {
+			fetch("/api/rss/recheck", {
 				method: "POST",
 			}).then(handleFetchResponse("Error rechecking rss")),
 		onSuccess: () => {
@@ -67,7 +65,7 @@ export function useClearActivity() {
 
 	return useMutation({
 		mutationFn: (num: number) =>
-			fetch(`/api/activity${num < 1 ? "" : `/${num}`}`, {
+			fetch(`/api/rss/activity${num < 1 ? "" : `/${num}`}`, {
 				method: "DELETE",
 			}).then(handleFetchResponse("Error clearing activities")),
 		onSuccess: () => {

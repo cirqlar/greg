@@ -6,7 +6,7 @@ use crate::auth::{is_logged_in, return_password_error};
 use crate::roadmap::tasks::check::check_roadmap;
 use crate::shared::{ApiResponse, Failure, Success};
 
-#[post("/recheck_roadmap")]
+#[post("/recheck")]
 pub async fn recheck_roadmap(data: AppData, req: HttpRequest) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, db).await? {

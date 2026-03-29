@@ -1,4 +1,7 @@
-use actix_web::{Scope, web};
+use actix_web::{
+    Scope,
+    web::{self, scope},
+};
 use log::{error, info};
 
 #[cfg(feature = "scheduler")]
@@ -12,8 +15,8 @@ mod tasks;
 mod types;
 mod utils;
 
-pub(super) fn add_routes(scope: Scope) -> Scope {
-    scope
+pub(super) fn get_routes() -> Scope {
+    scope("/roadmap")
         // Tabs
         .service(routes::tabs::get_most_recent_tabs)
         .service(routes::tabs::get_watched_tabs)

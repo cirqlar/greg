@@ -38,7 +38,7 @@ pub async fn get_activity(
     }
 }
 
-#[get("/activity/{source_id}")]
+#[get("/source/{source_id}/activity")]
 pub async fn get_source_activity(
     data: AppData,
     path: web::Path<u32>,

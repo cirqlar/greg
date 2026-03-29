@@ -7,7 +7,7 @@ export function useSources(demo?: boolean) {
 	return useQuery({
 		queryKey: ["sources", demo ?? false],
 		queryFn: (): Promise<TSource[]> =>
-			fetch(`/api/sources${demo ? "?demo=true" : ""}`).then(
+			fetch(`/api/rss/sources${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching sources"),
 			),
 	});
@@ -18,7 +18,7 @@ export function useAddSource() {
 
 	return useMutation({
 		mutationFn: (source: { url: string }) =>
-			fetch("/api/source/new", {
+			fetch("/api/rss/source/new", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -36,7 +36,7 @@ export function useEnableSource() {
 
 	return useMutation({
 		mutationFn: ({ id, enable }: { id: number; enable: boolean }) =>
-			fetch(`/api/source/${id}/enable/${enable}`, {
+			fetch(`/api/rss/source/${id}/enable/${enable}`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -53,7 +53,7 @@ export function useDeleteSource() {
 
 	return useMutation({
 		mutationFn: (id: number) =>
-			fetch(`/api/source/${id}`, {
+			fetch(`/api/rss/source/${id}`, {
 				method: "DELETE",
 			}).then(handleFetchResponse("Error deleting source")),
 		onSuccess: () => {

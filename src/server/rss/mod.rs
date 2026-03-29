@@ -1,4 +1,7 @@
-use actix_web::{Scope, web};
+use actix_web::{
+    Scope,
+    web::{self, scope},
+};
 use log::{error, info};
 
 #[cfg(feature = "scheduler")]
@@ -13,8 +16,8 @@ mod types;
 
 use types::{Activity, Source};
 
-pub(super) fn add_routes(scope: Scope) -> Scope {
-    scope
+pub(super) fn get_routes() -> Scope {
+    scope("/rss")
         // Sources
         .service(routes::sources::get_sources)
         .service(routes::sources::add_source)

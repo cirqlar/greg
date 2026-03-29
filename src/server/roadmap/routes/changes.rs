@@ -7,7 +7,7 @@ use crate::roadmap::queries::changes;
 use crate::roadmap::types::RDBChange;
 use crate::shared::{ApiResponse, Failure, Query, Success};
 
-#[get("/roadmap_activity/{id}")]
+#[get("/activity/{id}")]
 pub async fn get_changes(
     data: AppData,
     path: web::Path<u32>,

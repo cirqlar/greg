@@ -7,7 +7,7 @@ use crate::roadmap::queries::activity;
 use crate::roadmap::types::RoadmapActivity;
 use crate::shared::{ApiResponse, Failure, PaginationQuery, Success};
 
-#[get("/roadmap_activity")]
+#[get("/activity")]
 pub async fn get_roadmap_activity(
     data: AppData,
     query: web::Query<PaginationQuery>,
