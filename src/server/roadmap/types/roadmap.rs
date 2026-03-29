@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{RCard, RSection, RTab};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Roadmap {
     pub tabs: Vec<RTab>,
     pub cards: HashMap<String, Vec<RCard>>,
