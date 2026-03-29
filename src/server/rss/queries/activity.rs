@@ -1,11 +1,14 @@
+use std::ops::Deref;
+
 use libsql::{Connection, de, params};
+use time::OffsetDateTime;
 
 use crate::db::tables::{ACTIVITIES_T, SOURCES_T};
 use crate::rss::Activity;
 use crate::shared::DatabaseError;
 
 pub async fn get_activity(
-    db: Connection,
+    db: impl Deref<Target = Connection>,
     limit: u32,
     skip: u32,
 ) -> Result<Vec<Activity>, DatabaseError> {
@@ -38,7 +41,7 @@ pub async fn get_activity(
 }
 
 pub async fn get_source_activity(
-    db: Connection,
+    db: impl Deref<Target = Connection>,
     limit: u32,
     skip: u32,
     source_id: u32,
@@ -72,6 +75,29 @@ pub async fn get_source_activity(
     Ok(activities)
 }
 
+pub async fn add_activity(
+    db: impl Deref<Target = Connection>,
+    source_id: u32,
+    url: &str,
+) -> Result<u64, DatabaseError> {
+    db.execute(
+        &format!(
+            "INSERT INTO {ACTIVITIES_T} 
+						(source_id, post_url, timestamp) 
+					VALUES 
+						(?1, ?2, ?3)
+					"
+        ),
+        (
+            source_id,
+            url,
+            serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+        ),
+    )
+    .await
+    .map_err(DatabaseError::from)
+}
+
 pub async fn delete_all_activity(db: Connection) -> Result<(), DatabaseError> {
     let _ = db
         .execute(&format!("DELETE FROM {ACTIVITIES_T}"), params!())
@@ -80,7 +106,10 @@ pub async fn delete_all_activity(db: Connection) -> Result<(), DatabaseError> {
     Ok(())
 }
 
-pub async fn delete_activity(db: Connection, num: u32) -> Result<u64, DatabaseError> {
+pub async fn delete_activity(
+    db: impl Deref<Target = Connection>,
+    num: u32,
+) -> Result<u64, DatabaseError> {
     db.execute(
         &format!(
             "DELETE FROM {ACTIVITIES_T} 

@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use libsql::Connection;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -5,7 +7,10 @@ use uuid::Uuid;
 use crate::db::tables::LOGINS_T;
 use crate::shared::DatabaseError;
 
-pub async fn save_login_id(db: Connection, id: &Uuid) -> Result<u64, DatabaseError> {
+pub async fn save_login_id(
+    db: impl Deref<Target = Connection>,
+    id: &Uuid,
+) -> Result<u64, DatabaseError> {
     db.execute(
         &format!("INSERT INTO {LOGINS_T} (timestamp, key) VALUES (?1, ?2)"),
         [
@@ -18,7 +23,7 @@ pub async fn save_login_id(db: Connection, id: &Uuid) -> Result<u64, DatabaseErr
 }
 
 pub async fn get_key_timestamp(
-    db: Connection,
+    db: impl Deref<Target = Connection>,
     key: &str,
 ) -> Result<Option<OffsetDateTime>, DatabaseError> {
     let mut rows = db

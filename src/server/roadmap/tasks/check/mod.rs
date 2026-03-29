@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::ops::Deref;
 
 use libsql::Transaction;
 use log::{error, info, warn};
@@ -16,7 +17,6 @@ use crate::mail::send_email;
 
 mod changes;
 mod compare;
-mod db;
 mod new_roadmap;
 mod web;
 
@@ -61,9 +61,9 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
     }
 
     let db = data.app_db.connect().map_err(CheckRoadmapError::Conn)?;
-    let current_roadmap = web::get_web_roadmap(db.clone()).await?;
+    let current_roadmap = web::get_web_roadmap(&db).await?;
 
-    if let Some(previous_roadmap) = roadmap::get_most_recent_roadmap(db.clone())
+    if let Some(previous_roadmap) = roadmap::get_most_recent_roadmap(&db)
         .await
         .map_err(CheckRoadmapError::Prev)?
     {
@@ -83,7 +83,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
         }
 
         let tx = make_transation(data).await?;
-        let new_roadmap_id = db::roadmap::new_activity_tx(&tx)
+        let new_roadmap_id = roadmap::new_activity(tx.deref())
             .await
             .map_err(changes::SaveChangesError::DatabaseError)?;
 
@@ -102,7 +102,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
         let (tab_changes, card_changes) = changes.split_at(first_non_tab_index);
 
         changes::handle_tab_changes(
-            &tx,
+            tx.deref(),
             &previous_roadmap,
             &current_roadmap,
             new_roadmap_id,
@@ -112,7 +112,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
         .await?;
 
         changes::handle_card_changes(
-            &tx,
+            tx.deref(),
             &previous_roadmap,
             &current_roadmap,
             new_roadmap_id,
@@ -153,7 +153,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
     } else {
         let tx = make_transation(data).await?;
 
-        new_roadmap::save_new_roadmap(&tx, current_roadmap)
+        new_roadmap::save_new_roadmap(tx.deref(), current_roadmap)
             .await
             .map_err(CheckRoadmapError::NewRoadmap)?;
 

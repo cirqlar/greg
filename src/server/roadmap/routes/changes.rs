@@ -22,7 +22,7 @@ pub async fn get_changes(
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
+    if query.demo || is_logged_in(&req, &db).await? {
         changes::get_roadmap_changes(db, activity_id)
             .await
             .map(|changes| {

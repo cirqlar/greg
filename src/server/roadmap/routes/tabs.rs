@@ -18,8 +18,8 @@ pub async fn get_most_recent_tabs(
     } else {
         data.app_db.connect().unwrap()
     };
-    if query.demo || is_logged_in(&req, db.clone()).await? {
-        tabs::get_most_recent_roadmap_tabs(db)
+    if query.demo || is_logged_in(&req, &db).await? {
+        tabs::get_most_recent_roadmap_tabs(&db)
             .await
             .map(|tabs| {
                 info!("Got roadmap tabs");
@@ -48,8 +48,8 @@ pub async fn get_watched_tabs(
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
-        tabs::get_watched_tabs(db)
+    if query.demo || is_logged_in(&req, &db).await? {
+        tabs::get_watched_tabs(&db)
             .await
             .map(|watched_tabs| {
                 info!("Got watched tabs");
@@ -74,10 +74,10 @@ pub async fn add_watched_tab(
 ) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
 
-    if is_logged_in(&req, db.clone()).await? {
+    if is_logged_in(&req, &db).await? {
         let tab_id = path.into_inner();
 
-        tabs::add_watched_tab(db, tab_id.clone()).await
+        tabs::add_watched_tab(&db, tab_id.clone()).await
             .map(|success| {
                 if success == 1 {
                     info!("Inserted watched tab. tab_id: {tab_id}");
@@ -108,8 +108,8 @@ pub async fn delete_watched_tab(
     let db = data.app_db.connect().unwrap();
     let id = path.into_inner();
 
-    if is_logged_in(&req, db.clone()).await? {
-        tabs::delete_watched_tab(db, id).await
+    if is_logged_in(&req, &db).await? {
+        tabs::delete_watched_tab(&db, id).await
             .map(|success| {
                 if success == 1 {
                     info!("Deleted watched tab. id: {id}");

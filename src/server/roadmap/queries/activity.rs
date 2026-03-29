@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use libsql::{Connection, de};
 
 use crate::db::tables::{R_ACTIVITIES_T, R_CHANGES_T};
@@ -5,7 +7,7 @@ use crate::roadmap::types::RoadmapActivity;
 use crate::shared::DatabaseError;
 
 pub async fn get_roadmap_activity(
-    db: Connection,
+    db: impl Deref<Target = Connection>,
     limit: u32,
     skip: u32,
 ) -> Result<Vec<RoadmapActivity>, DatabaseError> {

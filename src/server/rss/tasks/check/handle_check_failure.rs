@@ -5,8 +5,8 @@ use log::error;
 use thiserror::Error;
 
 use super::check_source::CheckError;
-use crate::db::tables::SOURCES_T;
 use crate::rss::Source;
+use crate::rss::queries::sources::maybe_disable_source;
 use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
@@ -35,13 +35,7 @@ pub async fn handle_check_failure(
         1
     };
 
-    let _ = conn
-        .execute(
-            &format!("UPDATE {SOURCES_T} SET failed_count = ?1, enabled = ?2 WHERE id = ?3"),
-            (failed_count, enabled, source.id),
-        )
-        .await
-        .map_err(DatabaseError::from)?;
+    let _ = maybe_disable_source(&conn, source.id, enabled, failed_count).await?;
 
     if enabled == 0 {
         error!(

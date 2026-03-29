@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use actix_web::{HttpRequest, cookie::Cookie};
 use libsql::Connection;
 use log::error;
@@ -27,7 +29,10 @@ pub fn return_password_error<T: serde::Serialize>() -> ApiResponse<T> {
     Err(Failure::unauthorized_message("Wrong password".into()).with_cookie(c))
 }
 
-pub async fn base_is_logged_in(req: &HttpRequest, db: Connection) -> Result<bool, DatabaseError> {
+pub async fn base_is_logged_in(
+    req: &HttpRequest,
+    db: impl Deref<Target = Connection>,
+) -> Result<bool, DatabaseError> {
     match req.cookie(LOGGED_IN_COOKIE) {
         None => Ok(false),
         Some(res) => match get_key_timestamp(db, res.value()).await? {
@@ -37,7 +42,10 @@ pub async fn base_is_logged_in(req: &HttpRequest, db: Connection) -> Result<bool
     }
 }
 
-pub async fn is_logged_in(req: &HttpRequest, db: Connection) -> Result<bool, Failure> {
+pub async fn is_logged_in(
+    req: &HttpRequest,
+    db: impl Deref<Target = Connection>,
+) -> Result<bool, Failure> {
     base_is_logged_in(req, db).await.map_err(|err| {
         error!("Failed to check if logged in. err: {err:?}");
         Failure::server_error(err)

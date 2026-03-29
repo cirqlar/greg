@@ -34,7 +34,7 @@ pub async fn check_rss(data: &AppData) -> Result<(), CheckRssError> {
         warn!("Will not send emails as feature is not enabled");
     }
 
-    let sources = get_sources(data.app_db.connect().unwrap()).await?;
+    let sources = get_sources(&data.app_db.connect().unwrap()).await?;
 
     let mut threads = JoinSet::new();
     let client = reqwest::Client::new();

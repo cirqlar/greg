@@ -150,3 +150,11 @@ pub struct RDBChange {
 //             self.previous_card_description.take().map(clean_description);
 //     }
 // }
+
+pub struct ChangeInfo {
+    pub activity_id: u32,
+    pub change_type: &'static str,
+    pub previous_card_id: Option<u32>,
+    pub current_card_id: Option<u32>,
+    pub tab_id: Option<u32>,
+}

@@ -20,8 +20,8 @@ pub async fn get_activity(
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
-        activity::get_activity(db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
+    if query.demo || is_logged_in(&req, &db).await? {
+        activity::get_activity(&db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
             .await
             .map(|activity| {
                 info!("Got activity");
@@ -52,9 +52,9 @@ pub async fn get_source_activity(
     };
     let source_id = path.into_inner();
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
+    if query.demo || is_logged_in(&req, &db).await? {
         activity::get_source_activity(
-            db,
+            &db,
             query.count.unwrap_or(35),
             query.skip.unwrap_or(0),
             source_id,
@@ -78,7 +78,7 @@ pub async fn get_source_activity(
 #[delete("/activity")]
 pub async fn clear_all_activities(data: AppData, req: HttpRequest) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
-    if is_logged_in(&req, db.clone()).await? {
+    if is_logged_in(&req, &db).await? {
         activity::delete_all_activity(db)
             .await
             .map(|_| {
@@ -105,8 +105,8 @@ pub async fn clear_activities(
     let db = data.app_db.connect().unwrap();
     let num = path.into_inner();
 
-    if is_logged_in(&req, db.clone()).await? {
-        activity::delete_activity(db, num)
+    if is_logged_in(&req, &db).await? {
+        activity::delete_activity(&db, num)
             .await
             .map(|success| {
                 if success == (num as u64) {

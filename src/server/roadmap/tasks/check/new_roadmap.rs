@@ -1,18 +1,22 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
-use libsql::Transaction;
+use libsql::Connection;
 use log::info;
 use time::OffsetDateTime;
 
-use super::db::{roadmap, tabs};
+use crate::roadmap::queries::{cards, roadmap, tabs};
 use crate::roadmap::types::Roadmap;
 use crate::shared::DatabaseError;
 
-pub async fn save_new_roadmap(db: &Transaction, roadmap: Roadmap) -> Result<(), DatabaseError> {
+pub async fn save_new_roadmap(
+    db: impl Deref<Target = Connection>,
+    roadmap: Roadmap,
+) -> Result<(), DatabaseError> {
     let start_time = OffsetDateTime::now_utc();
     info!("Started saving new roadmap at {start_time}");
 
-    let roadmap_id = roadmap::new_activity_tx(db).await?;
+    let roadmap_id = roadmap::new_activity(db.deref()).await?;
     let road_end = OffsetDateTime::now_utc();
     info!(
         "Finished saving tabs at {} took {}",
@@ -22,7 +26,7 @@ pub async fn save_new_roadmap(db: &Transaction, roadmap: Roadmap) -> Result<(), 
 
     let mut tab_ids: HashMap<String, u32> = HashMap::new();
     for tab in roadmap.tabs.iter() {
-        let tab_id = tabs::save_tab_and_assignment(db, tab, roadmap_id).await?;
+        let tab_id = tabs::save_tab_and_assignment(db.deref(), tab, roadmap_id).await?;
 
         tab_ids.insert(tab.id.clone(), tab_id);
     }
@@ -33,7 +37,7 @@ pub async fn save_new_roadmap(db: &Transaction, roadmap: Roadmap) -> Result<(), 
         tab_end - road_end
     );
 
-    roadmap::save_all_cards_sync_tx(db, &roadmap, roadmap_id, &tab_ids).await?;
+    cards::save_all_cards(db.deref(), &roadmap, roadmap_id, &tab_ids).await?;
 
     let end_time = OffsetDateTime::now_utc();
     info!(

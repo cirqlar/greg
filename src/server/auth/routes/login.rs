@@ -15,7 +15,7 @@ use crate::shared::{ApiResponse, Failure, Success};
 pub async fn check_logged_in(data: AppData, req: HttpRequest) -> ApiResponse<bool> {
     let db = data.app_db.connect().unwrap();
 
-    base_is_logged_in(&req, db)
+    base_is_logged_in(&req, &db)
         .await
         .map(|logged_in| {
             let mut res = Success::ok(logged_in);
@@ -58,7 +58,7 @@ pub async fn login(login_info: web::Json<LoginInfo>, data: AppData) -> ApiRespon
         let id = Uuid::new_v4();
         let db = data.app_db.connect().unwrap();
 
-        save_login_id(db, &id)
+        save_login_id(&db, &id)
             .await
             .map(|x| {
                 if x == 1 {

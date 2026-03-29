@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::{collections::HashMap, env};
 
 use libsql::Connection;
@@ -127,7 +128,7 @@ fn web_to_saved_roadmap(mut roadmap: WebRoadmap, watched_ids: &[String]) -> Road
     url_saved_roadmap
 }
 
-pub async fn get_web_roadmap(db: Connection) -> Result<Roadmap, WebError> {
+pub async fn get_web_roadmap(db: impl Deref<Target = Connection>) -> Result<Roadmap, WebError> {
     let roadmap_json = get_roadmap_json().await?;
     let web_roadmap = get_web_roadmap_from_json(&roadmap_json).await?;
     let watched_ids = tabs::get_watched_tabs(db)

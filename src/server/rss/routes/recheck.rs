@@ -10,7 +10,7 @@ use crate::shared::{ApiResponse, Failure, Success};
 pub async fn recheck(data: AppData, req: HttpRequest) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
 
-    if is_logged_in(&req, db).await? {
+    if is_logged_in(&req, &db).await? {
         check_rss(&data)
             .await
             .map(|_| {

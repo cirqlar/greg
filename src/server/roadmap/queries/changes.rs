@@ -1,7 +1,10 @@
+use std::ops::Deref;
+
 use libsql::{Connection, de};
+use time::OffsetDateTime;
 
 use crate::db::tables::{R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T, R_TABS_T};
-use crate::roadmap::types::RDBChange;
+use crate::roadmap::types::{ChangeInfo, RDBChange};
 use crate::shared::DatabaseError;
 
 pub async fn get_roadmap_changes(
@@ -52,4 +55,31 @@ pub async fn get_roadmap_changes(
     }
 
     Ok(changes)
+}
+
+pub async fn save_change(
+    db: impl Deref<Target = Connection>,
+    change_info: ChangeInfo,
+) -> Result<(), DatabaseError> {
+    let _result = db
+        .execute(
+            &format!(
+                "INSERT INTO {R_CHANGES_T} 
+                    (type, activity_id, previous_card_id, current_card_id, tab_id, timestamp) 
+                VALUES 
+                    (?1,?2,?3,?4,?5,?6)
+                "
+            ),
+            (
+                change_info.change_type,
+                change_info.activity_id,
+                change_info.previous_card_id,
+                change_info.current_card_id,
+                change_info.tab_id,
+                serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+            ),
+        )
+        .await?;
+
+    Ok(())
 }

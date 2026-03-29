@@ -1,10 +1,12 @@
+use std::ops::Deref;
+
 use libsql::Connection;
 use log::info;
 use thiserror::Error;
-use time::OffsetDateTime;
 
 use super::check_source::CheckReturn;
-use crate::db::tables::{ACTIVITIES_T, SOURCES_T};
+use crate::rss::queries::activity::add_activity;
+use crate::rss::queries::sources::update_source_last_checked;
 use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
@@ -33,38 +35,13 @@ pub async fn handle_posts(
         rss_posts.len()
     );
 
-    let _ = tx
-        .execute(
-            &format!("UPDATE {SOURCES_T} SET last_checked = ?1, failed_count = ?2 WHERE id = ?3"),
-            (
-                serde_json::to_string(&rss_info.most_recent).unwrap(),
-                0,
-                rss_info.source_id,
-            ),
-        )
-        .await
-        .map_err(DatabaseError::from)?;
+    let _ =
+        update_source_last_checked(tx.deref(), rss_info.source_id, rss_info.most_recent).await?;
 
     for post in rss_posts.into_iter().rev() {
         info!("Handling post with title {}", post.title);
 
-        let _ = tx
-            .execute(
-                &format!(
-                    "INSERT INTO {ACTIVITIES_T} 
-						(source_id, post_url, timestamp) 
-					VALUES 
-						(?1, ?2, ?3)
-					"
-                ),
-                (
-                    rss_info.source_id,
-                    post.url.clone(),
-                    serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
-                ),
-            )
-            .await
-            .map_err(DatabaseError::from)?;
+        let _ = add_activity(tx.deref(), rss_info.source_id, &post.url).await?;
 
         #[cfg(feature = "mail")]
         let _ = send_email(

@@ -19,8 +19,8 @@ pub async fn get_roadmap_activity(
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
-        activity::get_roadmap_activity(db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
+    if query.demo || is_logged_in(&req, &db).await? {
+        activity::get_roadmap_activity(&db, query.count.unwrap_or(35), query.skip.unwrap_or(0))
             .await
             .map(|activities| {
                 info!("Got roadmap activity");

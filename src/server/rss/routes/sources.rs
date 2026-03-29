@@ -22,8 +22,8 @@ pub async fn get_sources(
         data.app_db.connect().unwrap()
     };
 
-    if query.demo || is_logged_in(&req, db.clone()).await? {
-        sources::get_sources(db)
+    if query.demo || is_logged_in(&req, &db).await? {
+        sources::get_sources(&db)
             .await
             .map(|sources| {
                 info!("Got sources");
@@ -53,14 +53,14 @@ pub async fn add_source(
 ) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
 
-    if is_logged_in(&req, db.clone()).await? {
+    if is_logged_in(&req, &db).await? {
         if let Err(err) = get_source(&source.url, reqwest::Client::new()).await {
             error!("Failed to verify source. err: {err:?}");
 
             return Err(Failure::bad_request(err));
         }
 
-        sources::add_source(db, source.url.clone())
+        sources::add_source(&db, source.url.clone())
             .await
             .map(|success| {
                 if success == 1 {
@@ -94,8 +94,8 @@ pub async fn enable_source(
 
     let db = data.app_db.connect().unwrap();
 
-    if is_logged_in(&req, db.clone()).await? {
-        sources::enable_source(db, source_id, enabled)
+    if is_logged_in(&req, &db).await? {
+        sources::enable_source(&db, source_id, enabled)
             .await
             .map(|success| {
                 if success == 1 {
@@ -130,8 +130,8 @@ pub async fn delete_source(path: web::Path<u32>, data: AppData, req: HttpRequest
     let db = data.app_db.connect().unwrap();
     let source_id = path.into_inner();
 
-    if is_logged_in(&req, db.clone()).await? {
-        sources::delete_source(db, source_id).await
+    if is_logged_in(&req, &db).await? {
+        sources::delete_source(&db, source_id).await
         .map(|success| {
             if success == 1 {
                     info!("Deleted source. id: {source_id}");

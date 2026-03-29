@@ -1,13 +1,17 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use libsql::{Connection, de, params};
+use time::OffsetDateTime;
 
 use super::tabs::get_roadmap_tabs;
 use crate::db::tables::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
 use crate::roadmap::types::{RCard, Roadmap, RoadmapActivity};
 use crate::shared::DatabaseError;
 
-pub async fn get_most_recent_roadmap(db: Connection) -> Result<Option<Roadmap>, DatabaseError> {
+pub async fn get_most_recent_roadmap(
+    db: impl Deref<Target = Connection>,
+) -> Result<Option<Roadmap>, DatabaseError> {
     let mut result = db
         .query(
             &format!("SELECT * FROM {R_ACTIVITIES_T} ORDER BY id DESC LIMIT 1"),
@@ -21,7 +25,7 @@ pub async fn get_most_recent_roadmap(db: Connection) -> Result<Option<Roadmap>, 
     let activity: RoadmapActivity = de::from_row(&r)?;
 
     // Get Tabs
-    let tabs = get_roadmap_tabs(db.clone(), activity.id).await?;
+    let tabs = get_roadmap_tabs(db.deref(), activity.id).await?;
 
     // Get Cards
     let mut result = db
@@ -69,4 +73,24 @@ pub async fn get_most_recent_roadmap(db: Connection) -> Result<Option<Roadmap>, 
         .for_each(|c| c.sort_by_key(|c| c.id.clone()));
 
     Ok(Some(Roadmap::with_data(tabs, cards)))
+}
+
+pub async fn new_activity(db: impl Deref<Target = Connection>) -> Result<u32, DatabaseError> {
+    let mut result = db
+        .query(
+            &format!(
+                "INSERT INTO {R_ACTIVITIES_T} 
+                    (timestamp) 
+                VALUES
+                    (?1)
+                RETURNING id
+                "
+            ),
+            [serde_json::to_string(&OffsetDateTime::now_utc()).unwrap()],
+        )
+        .await?;
+
+    let r = result.next().await?.unwrap();
+
+    Ok(r.get(0)?)
 }
