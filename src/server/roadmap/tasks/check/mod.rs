@@ -15,9 +15,9 @@ use crate::shared::DatabaseError;
 #[cfg(feature = "mail")]
 use crate::mail::send_email;
 
-mod changes;
-mod compare;
-mod new_roadmap;
+pub mod changes;
+pub mod compare;
+pub mod new_roadmap;
 mod web;
 
 use changes::SaveOrNotify;

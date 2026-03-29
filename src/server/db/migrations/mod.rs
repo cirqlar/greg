@@ -188,9 +188,13 @@ pub async fn apply_migrations(db: Connection) -> Result<(), ApplyMigrationError>
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use libsql::{Builder, Database};
     use rstest::fixture;
     use rstest::rstest;
+
+    use crate::roadmap::types::{cards::RCard, tabs::RTab};
 
     use super::*;
 
@@ -265,6 +269,15 @@ mod tests {
         migrations: Vec<Migration>,
     ) -> Result<(), ApplyMigrationError> {
         internal_apply_migrations(v2_db, &migrations).await
+    }
+    // Note: Currently useless until migrations to change roadmap tables are added
+    #[rstest]
+    #[tokio::test]
+    async fn can_migrate_database_with_duplicate_cards(
+        #[future(awt)] duplicate_db: Connection,
+        migrations: Vec<Migration>,
+    ) -> Result<(), ApplyMigrationError> {
+        internal_apply_migrations(duplicate_db, &migrations).await
     }
 
     // ----------- FIXTURES -----------
@@ -396,7 +409,33 @@ mod tests {
         v1_db
     }
 
-    async fn fill_db(db: &Connection) {
+    fn make_card(card_id: u32, tab_id: u32) -> RCard {
+        let id = format!("fake_card_{}", card_id);
+        RCard {
+            id: id.clone(),
+            name: id.clone(),
+            description: id.clone(),
+            image_url: Some(format!("http://roadmap.com/{}.png", id)),
+            slug: id.clone(),
+            db_id: Some(card_id),
+            section_position: Some(card_id),
+            card_position: Some(card_id),
+            assign_db_id: None,
+            tab_id: Some(tab_id),
+        }
+    }
+
+    fn make_tab(tab_id: u32) -> RTab {
+        let id = format!("fake_tab_{}", tab_id);
+        RTab {
+            id: id.clone(),
+            name: id.clone(),
+            slug: id.clone(),
+            db_id: Some(tab_id),
+        }
+    }
+
+    async fn fill_db_rss(db: &Connection) {
         use crate::rss::queries::{activity, sources};
 
         // Sources
@@ -420,13 +459,103 @@ mod tests {
         activity::add_activity(db, 3, "http://fake_source_1.com/fake_activity_4")
             .await
             .expect("Can add activity");
+    }
 
-        // TODO: Add Roadmap data as well
+    async fn fill_db_roadmap_in(db: &Connection, mut tabs: Vec<RTab>, cards: Vec<RCard>) {
+        use crate::roadmap::queries::roadmap;
+        use crate::roadmap::tasks::check::{changes, compare, new_roadmap};
+        use crate::roadmap::types::{changes::RChange, roadmap::Roadmap};
+
+        // Roadmap
+        let cards: HashMap<String, Vec<RCard>> = tabs
+            .iter()
+            .map(|tab| {
+                (
+                    tab.id.clone(),
+                    cards
+                        .iter()
+                        .filter(|c| c.tab_id.as_ref().unwrap() == tab.db_id.as_ref().unwrap())
+                        .cloned()
+                        .collect(),
+                )
+            })
+            .collect();
+        let rmap = Roadmap::with_data(tabs.clone(), cards.clone());
+        new_roadmap::save_new_roadmap(db, rmap.clone())
+            .await
+            .expect("Can save roadmap");
+
+        // Changes
+        tabs.push(make_tab(2));
+        let n_card = make_card(4, 1);
+
+        let mut n_rmap = rmap.clone();
+        n_rmap
+            .cards
+            .entry(tabs[1].id.clone())
+            .and_modify(|c| c.push(n_card));
+
+        let changes = compare::compare_roadmaps(&rmap, &n_rmap);
+
+        let mut tab_ids: HashMap<String, u32> = rmap
+            .tabs
+            .iter()
+            .map(|t| (t.id.clone(), t.db_id.unwrap()))
+            .collect();
+
+        let first_non_tab_index = changes
+            .iter()
+            .enumerate()
+            .find_map(|(index, ch)| (!matches!(ch, RChange::Tab(_))).then_some(index))
+            .unwrap_or(changes.len());
+
+        let (tab_changes, card_changes) = changes.split_at(first_non_tab_index);
+
+        roadmap::new_activity(db).await.expect("Can add roadmap");
+
+        changes::handle_tab_changes(db, &rmap, &n_rmap, 1, tab_changes, &mut tab_ids)
+            .await
+            .expect("Can save tab change");
+
+        changes::handle_card_changes(db, &rmap, &n_rmap, 1, card_changes, &tab_ids)
+            .await
+            .expect("Can save card change");
+    }
+
+    async fn fill_db_roadmap(db: &Connection) {
+        // Tabs
+        let tabs = vec![make_tab(0), make_tab(1)];
+
+        // Cards
+        let cards = vec![
+            make_card(0, 0),
+            make_card(1, 0),
+            make_card(2, 1),
+            make_card(3, 1),
+        ];
+
+        fill_db_roadmap_in(db, tabs, cards).await;
+    }
+
+    async fn fill_db_roadmap_with_duplicate(db: &Connection) {
+        // Tabs
+        let tabs = vec![make_tab(0), make_tab(1)];
+
+        // Cards
+        let cards = vec![
+            make_card(0, 0),
+            make_card(1, 0),
+            make_card(2, 1),
+            make_card(2, 1),
+        ];
+
+        fill_db_roadmap_in(db, tabs, cards).await;
     }
 
     #[fixture]
     async fn v1_db(#[future(awt)] empty_v1_db: Connection) -> Connection {
-        fill_db(&empty_v1_db).await;
+        fill_db_rss(&empty_v1_db).await;
+        fill_db_roadmap(&empty_v1_db).await;
 
         empty_v1_db
     }
@@ -458,7 +587,16 @@ mod tests {
 
     #[fixture]
     async fn v2_db(#[future(awt)] empty_v2_db: Connection) -> Connection {
-        fill_db(&empty_v2_db).await;
+        fill_db_rss(&empty_v2_db).await;
+        fill_db_roadmap(&empty_v2_db).await;
+
+        empty_v2_db
+    }
+
+    #[fixture]
+    async fn duplicate_db(#[future(awt)] empty_v2_db: Connection) -> Connection {
+        fill_db_rss(&empty_v2_db).await;
+        fill_db_roadmap_with_duplicate(&empty_v2_db).await;
 
         empty_v2_db
     }

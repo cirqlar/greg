@@ -11,7 +11,7 @@ use crate::AppData;
 
 pub mod queries;
 mod routes;
-mod tasks;
+pub mod tasks;
 pub mod types;
 mod utils;
 

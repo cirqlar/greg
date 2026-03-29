@@ -1,1 +1,1 @@
-pub(super) mod check;
+pub mod check;
