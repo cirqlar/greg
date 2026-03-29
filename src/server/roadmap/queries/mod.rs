@@ -1,5 +1,5 @@
-pub mod activity;
-pub mod cards;
-pub mod changes;
-pub mod roadmap;
-pub mod tabs;
+pub(super) mod activity;
+pub(super) mod cards;
+pub(super) mod changes;
+pub(super) mod roadmap;
+pub(super) mod tabs;

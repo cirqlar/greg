@@ -9,10 +9,10 @@ use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 
 use crate::AppData;
 
-pub mod queries;
+mod queries;
 mod routes;
 mod tasks;
-pub mod types;
+mod types;
 mod utils;
 
 pub(super) fn get_routes() -> Scope {

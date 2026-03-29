@@ -1,9 +1,9 @@
-pub mod cards;
-pub mod changes;
-pub mod db;
-pub mod roadmap;
-pub mod section;
-pub mod tabs;
+mod cards;
+mod changes;
+mod db;
+mod roadmap;
+mod section;
+mod tabs;
 
 pub(super) use cards::*;
 pub(super) use changes::*;

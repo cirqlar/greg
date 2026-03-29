@@ -4,7 +4,7 @@ use time::OffsetDateTime;
 use crate::shared::timestamp::{deserialize_timestamp, serialize_timestamp};
 
 #[derive(Serialize, Deserialize)]
-pub struct Source {
+pub(super) struct Source {
     pub id: u32,
     pub url: String,
     #[serde(
@@ -17,7 +17,7 @@ pub struct Source {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Activity {
+pub(super) struct Activity {
     pub id: u32,
     pub source_url: String,
     pub post_url: String,
