@@ -9,10 +9,10 @@ use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 
 use crate::AppData;
 
-mod queries;
+pub mod queries;
 mod routes;
 mod tasks;
-mod types;
+pub mod types;
 
 use types::{Activity, Source};
 

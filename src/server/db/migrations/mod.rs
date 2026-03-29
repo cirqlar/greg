@@ -233,7 +233,16 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn can_migrate_v1_database(
+    async fn can_migrate_empty_v1_database(
+        #[future(awt)] empty_v1_db: Connection,
+        migrations: Vec<Migration>,
+    ) -> Result<(), ApplyMigrationError> {
+        internal_apply_migrations(empty_v1_db, &migrations).await
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_migrate_nonempty_v1_database(
         #[future(awt)] v1_db: Connection,
         migrations: Vec<Migration>,
     ) -> Result<(), ApplyMigrationError> {
@@ -242,11 +251,20 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn can_migrate_v2_database(
+    async fn can_migrate_empty_v2_database(
+        #[future(awt)] empty_v2_db: Connection,
+        migrations: Vec<Migration>,
+    ) -> Result<(), ApplyMigrationError> {
+        internal_apply_migrations(empty_v2_db, &migrations).await
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_migrate_nonempty_v2_database(
         #[future(awt)] v2_db: Connection,
         migrations: Vec<Migration>,
     ) -> Result<(), ApplyMigrationError> {
-        internal_apply_migrations(v2_db, &migrations /*[..(migrations.len() - 1)]*/).await
+        internal_apply_migrations(v2_db, &migrations).await
     }
 
     // ----------- FIXTURES -----------
@@ -262,7 +280,7 @@ mod tests {
     }
 
     #[fixture]
-    async fn v1_db(#[future(awt)] empty_db: Database) -> Connection {
+    async fn empty_v1_db(#[future(awt)] empty_db: Database) -> Connection {
         use crate::db::tables::{
             ACTIVITIES_T, LOGINS_T, R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T, R_CHANGES_T,
             R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T, SOURCES_T, VERSION_T,
@@ -378,8 +396,43 @@ mod tests {
         v1_db
     }
 
+    async fn fill_db(db: &Connection) {
+        use crate::rss::queries::{activity, sources};
+
+        // Sources
+        sources::add_source(db, "http://fake_source_1.com".into())
+            .await
+            .expect("Can add source");
+        sources::add_source(db, "http://fake_source_2.com".into())
+            .await
+            .expect("Can add source");
+
+        // Activity
+        activity::add_activity(db, 1, "http://fake_source_1.com/fake_activity_1")
+            .await
+            .expect("Can add activity");
+        activity::add_activity(db, 1, "http://fake_source_1.com/fake_activity_2")
+            .await
+            .expect("Can add activity");
+        activity::add_activity(db, 2, "http://fake_source_1.com/fake_activity_3")
+            .await
+            .expect("Can add activity");
+        activity::add_activity(db, 3, "http://fake_source_1.com/fake_activity_4")
+            .await
+            .expect("Can add activity");
+
+        // TODO: Add Roadmap data as well
+    }
+
     #[fixture]
-    async fn v2_db(#[future(awt)] v1_db: Connection) -> Connection {
+    async fn v1_db(#[future(awt)] empty_v1_db: Connection) -> Connection {
+        fill_db(&empty_v1_db).await;
+
+        empty_v1_db
+    }
+
+    #[fixture]
+    async fn empty_v2_db(#[future(awt)] empty_v1_db: Connection) -> Connection {
         use crate::db::tables::{SOURCES_T, VERSION_T};
 
         #[rustfmt::skip]
@@ -395,11 +448,18 @@ mod tests {
             "),
         ];
 
-        v1_db
+        empty_v1_db
             .execute_transactional_batch(&stmnts.join(";\n"))
             .await
             .expect("Can migrate v1 database to v2 database");
 
-        v1_db
+        empty_v1_db
+    }
+
+    #[fixture]
+    async fn v2_db(#[future(awt)] empty_v2_db: Connection) -> Connection {
+        fill_db(&empty_v2_db).await;
+
+        empty_v2_db
     }
 }
