@@ -15,7 +15,7 @@ export type TActivity = {
 export type TRoadmapActivity = {
 	id: number;
 	timestamp: string;
-	change_count: number | null;
+	change_count: number;
 };
 
 export type TWatchedTab = {

@@ -247,9 +247,7 @@ function ChangeList() {
 						{page
 							.filter(
 								(activity) =>
-									(activity.change_count &&
-										activity.change_count !== 0) ||
-									!hideEmpty,
+									activity.change_count !== 0 || !hideEmpty,
 							)
 							.map((activity) => (
 								<div
