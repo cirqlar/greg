@@ -115,13 +115,8 @@ mod tests {
         };
 
         if let Value::Text(last_checked) = row.get_value(1)? {
-            let last_checked = serde_json::from_str::<OffsetDateTime>(&last_checked);
-            assert!(
-                last_checked.is_ok(),
-                "last_checked from db can be deserialized to offsetdatetime"
-            );
-
-            let last_checked = last_checked.unwrap();
+            let last_checked = serde_json::from_str::<OffsetDateTime>(&last_checked)
+                .expect("last_checked from db can be deserialized to offsetdatetime");
 
             let difference = last_checked - now;
 

@@ -23,7 +23,7 @@ pub async fn get_changes(
     };
 
     if query.demo || is_logged_in(&req, &db).await? {
-        changes::get_roadmap_changes(db, activity_id)
+        changes::get_roadmap_changes(&db, activity_id)
             .await
             .map(|changes| {
                 info!("Got roadmap changes. activity_id: {activity_id}");

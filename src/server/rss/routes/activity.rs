@@ -79,7 +79,7 @@ pub async fn get_source_activity(
 pub async fn clear_all_activities(data: AppData, req: HttpRequest) -> ApiResponse {
     let db = data.app_db.connect().unwrap();
     if is_logged_in(&req, &db).await? {
-        activity::delete_all_activity(db)
+        activity::delete_all_activity(&db)
             .await
             .map(|_| {
                 info!("Deleted activity");

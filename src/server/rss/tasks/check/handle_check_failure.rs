@@ -1,4 +1,5 @@
 use std::env;
+use std::ops::Deref;
 
 use libsql::Connection;
 use log::error;
@@ -23,14 +24,14 @@ pub enum HandleFailureError {
 pub async fn handle_check_failure(
     source: &Source,
     check_error: &CheckError,
-    conn: Connection,
+    conn: impl Deref<Target = Connection>,
     client: reqwest::Client,
 ) -> Result<(), HandleFailureError> {
     let failed_count = source.failed_count + 1;
     let enabled =
         failed_count < env::var("SOURCE_DISABLE_AFTER").map_or(10, |v| v.parse().unwrap_or(10));
 
-    let _ = enable_source(&conn, source.id, enabled, failed_count).await?;
+    let _ = enable_source(conn, source.id, enabled, failed_count).await?;
 
     if !enabled {
         error!(

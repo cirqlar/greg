@@ -52,7 +52,7 @@ pub async fn check_rss(data: &AppData) -> Result<(), CheckRssError> {
                 let _ = handle_check_failure::handle_check_failure(
                     &source,
                     &e,
-                    s_conn,
+                    &s_conn,
                     s_client.clone(),
                 )
                 .await;

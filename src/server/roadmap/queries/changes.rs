@@ -8,7 +8,7 @@ use crate::roadmap::types::{ChangeInfo, RDBChange};
 use crate::shared::DatabaseError;
 
 pub async fn get_roadmap_changes(
-    db: Connection,
+    db: impl Deref<Target = Connection>,
     activity_id: u32,
 ) -> Result<Vec<RDBChange>, DatabaseError> {
     let mut result = db
