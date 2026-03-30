@@ -95,7 +95,7 @@ pub async fn enable_source(
     let db = data.app_db.connect().unwrap();
 
     if is_logged_in(&req, &db).await? {
-        sources::enable_source(&db, source_id, enabled)
+        sources::enable_source(&db, source_id, enabled, 0)
             .await
             .map(|success| {
                 if success == 1 {

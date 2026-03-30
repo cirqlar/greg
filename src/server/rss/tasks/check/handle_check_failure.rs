@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use super::check_source::CheckError;
 use crate::rss::Source;
-use crate::rss::queries::sources::maybe_disable_source;
+use crate::rss::queries::sources::enable_source;
 use crate::shared::DatabaseError;
 
 #[cfg(feature = "mail")]
@@ -27,17 +27,12 @@ pub async fn handle_check_failure(
     client: reqwest::Client,
 ) -> Result<(), HandleFailureError> {
     let failed_count = source.failed_count + 1;
-    let enabled = if failed_count
-        >= env::var("SOURCE_DISABLE_AFTER").map_or(10, |v| v.parse().unwrap_or(10))
-    {
-        0
-    } else {
-        1
-    };
+    let enabled =
+        failed_count < env::var("SOURCE_DISABLE_AFTER").map_or(10, |v| v.parse().unwrap_or(10));
 
-    let _ = maybe_disable_source(&conn, source.id, enabled, failed_count).await?;
+    let _ = enable_source(&conn, source.id, enabled, failed_count).await?;
 
-    if enabled == 0 {
+    if !enabled {
         error!(
             "Disabling ource at {} because has failed {} times. Error: {:?}",
             source.url, failed_count, check_error
