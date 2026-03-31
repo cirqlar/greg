@@ -61,3 +61,56 @@ pub async fn get_roadmap_activity(
 
     Ok(activities)
 }
+
+#[cfg(test)]
+mod tests {
+    use libsql::{Value, params};
+    use rstest::rstest;
+    use time::ext::NumericalDuration;
+
+    use super::*;
+    use crate::db::tests::empty_db;
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_activity(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let id = add_activity(&empty_db).await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT 
+                        id,
+                        timestamp
+                    FROM {R_ACTIVITIES_T}
+                "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not retrieve activity");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(1)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+}
