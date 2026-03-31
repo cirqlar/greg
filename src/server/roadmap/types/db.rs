@@ -6,7 +6,6 @@ use crate::shared::timestamp::{deserialize_timestamp, serialize_timestamp};
 #[derive(Serialize, Deserialize)]
 pub struct RoadmapActivity {
     pub id: u32,
-    #[serde(default)]
     pub change_count: u32,
     #[serde(
         deserialize_with = "deserialize_timestamp",

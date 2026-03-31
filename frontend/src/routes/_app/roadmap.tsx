@@ -16,30 +16,25 @@ import {
 	useInfiniteRoadmapActivity,
 	useRefreshRoadmap,
 	useRoadmapTabs,
-	useRoadmapWatchedTabs,
 	useUnwatchTabMutation,
 	useWatchTabMutation,
 } from "@/query/roadmap";
-import type { TRTab, TWatchedTab } from "@/query/types";
+import type { TRTab } from "@/query/types";
 import { updateProcessing, useProcessing } from "@/stores/processing";
 
 export const Route = createFileRoute("/_app/roadmap")({
 	component: RouteComponent,
 });
 
-type ProcessedTab = TRTab &
-	(
-		| { watched: true; watchedTab: TWatchedTab }
-		| { watched: false; watchedTab?: never }
-	);
-
-function Tab({ tab }: { tab: ProcessedTab }) {
+function Tab({ tab }: { tab: TRTab }) {
 	const { demo } = Route.useSearch();
 
 	const watchTab = useWatchTabMutation();
 	const unwatchTab = useUnwatchTabMutation();
 
 	const processing = useProcessing((state) => state.processing);
+
+	const watched = tab.watch_id !== null;
 
 	return (
 		<div className="flex flex-col items-stretch gap-4 rounded-lg px-5 py-3">
@@ -53,13 +48,34 @@ function Tab({ tab }: { tab: ProcessedTab }) {
 			</div>
 
 			<div className="flex items-stretch justify-between">
-				<div
-					className={clsx(
-						"flex items-center rounded-full px-3.5 py-1 text-sm text-black",
-						tab.watched ? "bg-green-400" : "bg-red-400",
+				<div className="flex">
+					{watched && (
+						<div
+							className={clsx(
+								"flex items-center rounded-full bg-green-400 px-3.5 py-1 text-sm text-black",
+							)}
+						>
+							<p>Watched</p>
+						</div>
 					)}
-				>
-					<p>{tab.watched ? "Watched" : "Not Watched"}</p>
+					{tab.deleted && (
+						<div
+							className={clsx(
+								"flex items-center rounded-full bg-red-400 px-3.5 py-1 text-sm text-black",
+							)}
+						>
+							<p>Deleted</p>
+						</div>
+					)}
+					{!watched && !tab.deleted && (
+						<div
+							className={clsx(
+								"flex items-center rounded-full bg-white px-3.5 py-1 text-sm text-black",
+							)}
+						>
+							<p>Not Watched</p>
+						</div>
+					)}
 				</div>
 				<div className="flex gap-2">
 					<ExternalLink
@@ -69,21 +85,22 @@ function Tab({ tab }: { tab: ProcessedTab }) {
 						size="small"
 					/>
 					<Button
-						Icon={tab.watched ? CrossIcon : CheckIcon}
-						iconLabel={tab.watched ? "Unwatch Tab" : "Watch Tab"}
+						Icon={watched ? CrossIcon : CheckIcon}
+						iconLabel={watched ? "Unwatch Tab" : "Watch Tab"}
 						disabled={demo || processing}
 						animate={watchTab.isPending || unwatchTab.isPending}
 						error={watchTab.isError || unwatchTab.isError}
-						theme={tab.watched ? "red" : "green"}
+						theme={watched ? "red" : "green"}
 						size="small"
 						onClick={async () => {
 							if (processing) return;
 
 							updateProcessing(true);
 							try {
-								if (tab.watched) {
+								if (watched) {
+									// can't be watched if its null
 									await unwatchTab.mutateAsync(
-										tab.watchedTab.id,
+										tab.watch_id as number,
 									);
 								} else {
 									await watchTab.mutateAsync(tab.id);
@@ -94,7 +111,7 @@ function Tab({ tab }: { tab: ProcessedTab }) {
 							updateProcessing(false);
 						}}
 					>
-						{tab.watched ? "Unwatch" : "Watch"}
+						{watched ? "Unwatch" : "Watch"}
 					</Button>
 				</div>
 			</div>
@@ -110,48 +127,33 @@ function TabList() {
 		error: rtError,
 		isLoading: rtIsLoading,
 	} = useRoadmapTabs(demo);
-	const {
-		data: watchedTabs,
-		error: wtError,
-		isLoading: wtIsLoading,
-	} = useRoadmapWatchedTabs(demo);
 
-	const processedTabs = useMemo(() => {
-		if (roadmapTabs && watchedTabs) {
-			const tabs: ProcessedTab[] = [];
+	const sortedTabs = useMemo(() => {
+		if (roadmapTabs) {
+			return [...roadmapTabs].sort((a, b) => {
+				const a_watched = a.watch_id !== null;
+				const b_watched = b.watch_id !== null;
 
-			for (let i = 0; i < watchedTabs.length; i++) {
-				const wTab = watchedTabs[i];
-
-				let tab = roadmapTabs.find((t) => t.id == wTab.tab_id);
-
-				if (!tab) {
-					console.log("Missing Watched tab", wTab.tab_id);
-					tab = {
-						db_id: 0,
-						name: "Missing Tab",
-						slug: "Missing Slug",
-						id: wTab.tab_id,
-					};
+				if (a_watched === b_watched && a.deleted === b.deleted) {
+					return a.name.localeCompare(b.name);
+				} else if (a_watched && !b_watched) {
+					return -1;
+				} else if (!a_watched && b_watched) {
+					return 1;
+				} else if (!a.deleted && b.deleted) {
+					return -1;
+				} else if (a.deleted && !b.deleted) {
+					return 1;
 				}
 
-				tabs.push({ ...tab, watched: true, watchedTab: wTab });
-			}
-
-			for (let i = 0; i < roadmapTabs.length; i++) {
-				let tab = roadmapTabs[i];
-				if (!watchedTabs.find((wTab) => wTab.tab_id === tab.id)) {
-					tabs.push({ ...tab, watched: false });
-				}
-			}
-
-			return tabs;
+				throw new Error("unreachable");
+			});
 		} else {
 			return [];
 		}
-	}, [roadmapTabs, watchedTabs]);
+	}, [roadmapTabs]);
 
-	if (rtIsLoading || wtIsLoading) {
+	if (rtIsLoading) {
 		return (
 			<div className="px-5">
 				<p>Loading</p>
@@ -159,7 +161,7 @@ function TabList() {
 		);
 	}
 
-	if (rtError || !roadmapTabs || wtError || !watchedTabs) {
+	if (rtError || !roadmapTabs) {
 		return (
 			<div className="px-5">
 				<p>Error loading roadmap tabs</p>
@@ -167,7 +169,7 @@ function TabList() {
 		);
 	}
 
-	if (processedTabs.length === 0) {
+	if (sortedTabs.length === 0) {
 		return (
 			<div className="px-5">
 				<p>No tabs yet</p>
@@ -177,7 +179,7 @@ function TabList() {
 
 	return (
 		<div className="grid w-full grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-2 lg:flex lg:flex-col">
-			{processedTabs.map((tab) => (
+			{sortedTabs.map((tab) => (
 				<Tab tab={tab} key={tab.name} />
 			))}
 		</div>
@@ -247,7 +249,7 @@ function ChangeList() {
 						{page
 							.filter(
 								(activity) =>
-									activity.change_count !== 0 || !hideEmpty,
+									activity.change_count || !hideEmpty,
 							)
 							.map((activity) => (
 								<div

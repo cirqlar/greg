@@ -7,7 +7,10 @@ pub struct RTab {
     pub id: String,
     pub name: String,
     pub slug: String,
+
     pub db_id: Option<u32>,
+    pub deleted: Option<bool>,
+    pub watch_id: Option<u32>,
 }
 
 impl PartialEq for RTab {

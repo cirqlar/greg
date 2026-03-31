@@ -5,7 +5,7 @@ use libsql::Connection;
 use log::info;
 use time::OffsetDateTime;
 
-use crate::roadmap::queries::{cards, roadmap, tabs};
+use crate::roadmap::queries::{activity, cards, tabs};
 use crate::roadmap::types::Roadmap;
 use crate::shared::DatabaseError;
 
@@ -16,7 +16,7 @@ pub async fn save_new_roadmap(
     let start_time = OffsetDateTime::now_utc();
     info!("Started saving new roadmap at {start_time}");
 
-    let roadmap_id = roadmap::new_activity(db.deref()).await?;
+    let roadmap_id = activity::add_activity(db.deref()).await?;
     let road_end = OffsetDateTime::now_utc();
     info!(
         "Finished saving tabs at {} took {}",
@@ -37,7 +37,7 @@ pub async fn save_new_roadmap(
         tab_end - road_end
     );
 
-    cards::save_all_cards(db.deref(), &roadmap, roadmap_id, &tab_ids).await?;
+    cards::add_and_assign_cards(db.deref(), &roadmap, roadmap_id, &tab_ids).await?;
 
     let end_time = OffsetDateTime::now_utc();
     info!(

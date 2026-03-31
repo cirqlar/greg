@@ -7,8 +7,8 @@ use crate::roadmap::queries::tabs;
 use crate::roadmap::types::{RTab, RoadmapWatchedTab};
 use crate::shared::{ApiResponse, Failure, Query, Success};
 
-#[get("/most_recent_tabs")]
-pub async fn get_most_recent_tabs(
+#[get("/tabs")]
+pub async fn get_tabs(
     data: AppData,
     query: web::Query<Query>,
     req: HttpRequest,
@@ -19,7 +19,7 @@ pub async fn get_most_recent_tabs(
         data.app_db.connect().unwrap()
     };
     if query.demo || is_logged_in(&req, &db).await? {
-        tabs::get_most_recent_roadmap_tabs(&db)
+        tabs::get_tabs(&db)
             .await
             .map(|tabs| {
                 info!("Got roadmap tabs");

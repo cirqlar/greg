@@ -18,7 +18,7 @@ mod utils;
 pub(super) fn get_routes() -> Scope {
     scope("/roadmap")
         // Tabs
-        .service(routes::tabs::get_most_recent_tabs)
+        .service(routes::tabs::get_tabs)
         .service(routes::tabs::get_watched_tabs)
         .service(routes::tabs::add_watched_tab)
         .service(routes::tabs::delete_watched_tab)

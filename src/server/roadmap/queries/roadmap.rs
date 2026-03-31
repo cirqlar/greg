@@ -1,96 +1,44 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 
-use libsql::{Connection, de, params};
-use time::OffsetDateTime;
+use libsql::Connection;
 
-use super::tabs::get_roadmap_tabs;
-use crate::db::tables::{R_ACTIVITIES_T, R_CARD_ASSIGNS_T, R_CARDS_T};
-use crate::roadmap::types::{RCard, Roadmap, RoadmapActivity};
+use super::activity::get_roadmap_activity;
+use super::cards::get_roadmap_activity_cards;
+use super::tabs::get_roadmap_activity_tabs;
+use crate::roadmap::types::{RCard, Roadmap};
 use crate::shared::DatabaseError;
 
 pub async fn get_most_recent_roadmap(
     db: impl Deref<Target = Connection>,
 ) -> Result<Option<Roadmap>, DatabaseError> {
-    let mut result = db
-        .query(
-            &format!("SELECT * FROM {R_ACTIVITIES_T} ORDER BY id DESC LIMIT 1"),
-            params!(),
-        )
-        .await?;
-    let Some(r) = result.next().await? else {
+    let Some(activity) = get_roadmap_activity(db.deref(), 1, 0).await?.pop() else {
         return Ok(None);
     };
 
-    let activity: RoadmapActivity = de::from_row(&r)?;
-
     // Get Tabs
-    let tabs = get_roadmap_tabs(db.deref(), activity.id).await?;
+    let tabs = get_roadmap_activity_tabs(db.deref(), activity.id).await?;
 
     // Get Cards
-    let mut result = db
-        .query(
-            &format!(
-                "SELECT 
-                    ra.id as assign_db_id,
-                    ra.tab_id,
-                    ra.card_id as db_id,
-                    ra.section_position,
-                    ra.card_position,
+    let cards = get_roadmap_activity_cards(db.deref(), activity.id).await?;
 
-                    rc.roadmap_id AS id,
-                    rc.name,
-                    rc.description,
-                    rc.image_url,
-                    rc.slug
-                FROM {R_CARD_ASSIGNS_T} AS ra
-                INNER JOIN {R_CARDS_T} AS rc 
-                    ON ra.card_id = rc.id
-                WHERE ra.activity_id = ?1
-                "
-            ),
-            [activity.id],
-        )
-        .await?;
+    let mut cards_map: HashMap<String, Vec<RCard>> = HashMap::new();
 
-    let mut cards: HashMap<String, Vec<RCard>> = HashMap::new();
-
-    while let Some(r) = result.next().await? {
-        let c = de::from_row::<RCard>(&r)?;
-        let t_id = c.tab_id.unwrap();
-        let t_id = tabs
+    for card in cards {
+        let tab_db_id = card.db_id.expect("came from db, should have tab id");
+        let tab_roadmap_id = tabs
             .iter()
-            .find(|t| *t.db_id.as_ref().unwrap() == t_id)
+            .find(|tab| *tab.db_id.as_ref().unwrap() == tab_db_id)
             .unwrap()
             .id
             .clone();
-        let v = cards.entry(t_id).or_default();
-        v.push(c);
+        let tab_cards = cards_map.entry(tab_roadmap_id).or_default();
+        tab_cards.push(card);
     }
 
-    cards
+    cards_map
         .values_mut()
-        .for_each(|c| c.sort_by_key(|c| c.id.clone()));
+        .for_each(|cards| cards.sort_by_key(|card| card.id.clone()));
 
-    Ok(Some(Roadmap::with_data(tabs, cards)))
-}
-
-pub async fn new_activity(db: impl Deref<Target = Connection>) -> Result<u32, DatabaseError> {
-    let mut result = db
-        .query(
-            &format!(
-                "INSERT INTO {R_ACTIVITIES_T} 
-                    (timestamp) 
-                VALUES
-                    (?1)
-                RETURNING id
-                "
-            ),
-            [serde_json::to_string(&OffsetDateTime::now_utc()).unwrap()],
-        )
-        .await?;
-
-    let r = result.next().await?.unwrap();
-
-    Ok(r.get(0)?)
+    Ok(Some(Roadmap::with_data(tabs, cards_map)))
 }

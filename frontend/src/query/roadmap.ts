@@ -15,7 +15,7 @@ import { handleFetchResponse } from "./util";
 
 export function useRoadmapActivity(demo?: boolean) {
 	return useQuery({
-		queryKey: ["roadmap_activity", demo ?? false],
+		queryKey: ["roadmap", "activities", demo ?? false],
 		queryFn: (): Promise<TRoadmapActivity[]> =>
 			fetch(`/api/roadmap/activity${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching roadmap activity"),
@@ -25,7 +25,7 @@ export function useRoadmapActivity(demo?: boolean) {
 
 export function useInfiniteRoadmapActivity(demo?: boolean, count: number = 35) {
 	return useInfiniteQuery({
-		queryKey: ["roadmap_activity", count, demo ?? false],
+		queryKey: ["roadmap", "activities", count, demo ?? false],
 		queryFn: ({ pageParam }): Promise<TRoadmapActivity[]> => {
 			const searchParams = new URLSearchParams();
 			searchParams.append("count", count.toString());
@@ -49,17 +49,17 @@ export function useInfiniteRoadmapActivity(demo?: boolean, count: number = 35) {
 
 export function useRoadmapTabs(demo?: boolean) {
 	return useQuery({
-		queryKey: ["most_recent_tabs", demo ?? false],
+		queryKey: ["roadmap", "tabs", demo ?? false],
 		queryFn: (): Promise<TRTab[]> =>
-			fetch(
-				`/api/roadmap/most_recent_tabs${demo ? "?demo=true" : ""}`,
-			).then(handleFetchResponse("Error fetching most recent tabs")),
+			fetch(`/api/roadmap/tabs${demo ? "?demo=true" : ""}`).then(
+				handleFetchResponse("Error fetching most recent tabs"),
+			),
 	});
 }
 
 export function useRoadmapWatchedTabs(demo?: boolean) {
 	return useQuery({
-		queryKey: ["watched_tabs", demo ?? false],
+		queryKey: ["roadmap", "tabs", "watched", demo ?? false],
 		queryFn: (): Promise<TWatchedTab[]> =>
 			fetch(`/api/roadmap/watched_tabs${demo ? "?demo=true" : ""}`).then(
 				handleFetchResponse("Error fetching watched tabs"),
@@ -69,7 +69,7 @@ export function useRoadmapWatchedTabs(demo?: boolean) {
 
 export function useRoadmapChanges(roadmapId: number, demo?: boolean) {
 	return useQuery({
-		queryKey: ["roadmap", roadmapId, demo ?? false],
+		queryKey: ["roadmap", "activity", roadmapId, "changes", demo ?? false],
 		queryFn: (): Promise<TRoadmapChange[]> =>
 			fetch(
 				`/api/roadmap/activity/${roadmapId}${demo ? "?demo=true" : ""}`,
@@ -86,7 +86,7 @@ export function useUnwatchTabMutation() {
 				method: "DELETE",
 			}).then(handleFetchResponse("Error unwatching tab")),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+			queryClient.invalidateQueries({ queryKey: ["roadmap", "tabs"] });
 		},
 	});
 }
@@ -100,7 +100,7 @@ export function useWatchTabMutation() {
 				method: "POST",
 			}).then(handleFetchResponse("Error watching tab")),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+			queryClient.invalidateQueries({ queryKey: ["roadmap", "tabs"] });
 		},
 	});
 }
@@ -114,9 +114,10 @@ export function useRefreshRoadmap() {
 				method: "POST",
 			}).then(handleFetchResponse("Error refreshing roadmap")),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["roadmap_activity"] });
-			queryClient.invalidateQueries({ queryKey: ["most_recent_tabs"] });
-			queryClient.invalidateQueries({ queryKey: ["watched_tabs"] });
+			queryClient.invalidateQueries({ queryKey: ["roadmap", "tabs"] });
+			queryClient.invalidateQueries({
+				queryKey: ["roadmap", "activities"],
+			});
 		},
 	});
 }

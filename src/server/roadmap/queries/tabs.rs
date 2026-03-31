@@ -4,7 +4,7 @@ use libsql::{Connection, de, params};
 use time::OffsetDateTime;
 
 use crate::db::tables::{R_ACTIVITIES_T, R_TAB_ASSIGNS_T, R_TABS_T, R_WATCHED_TABS_T};
-use crate::roadmap::types::{RTab, RoadmapActivity, RoadmapWatchedTab};
+use crate::roadmap::types::{RTab, RoadmapWatchedTab};
 use crate::shared::DatabaseError;
 
 pub async fn get_watched_tabs(
@@ -23,9 +23,47 @@ pub async fn get_watched_tabs(
     Ok(tabs)
 }
 
-pub async fn get_roadmap_tabs(
+pub async fn get_tabs(db: impl Deref<Target = Connection>) -> Result<Vec<RTab>, DatabaseError> {
+    let mut result = db
+        .query(
+            &format!(
+                "SELECT
+                    rt.id AS db_id,
+                    rt.roadmap_id AS id,
+                    rt.name,
+                    rt.slug,
+                    (rt.id NOT IN (
+                        -- most recent activity's tabs --
+                        SELECT rta.tab_id FROM `{R_TAB_ASSIGNS_T}` AS rta
+                        WHERE rta.activity_id = (
+                            -- most recent activity --
+                            SELECT ra.id FROM `{R_ACTIVITIES_T}` as ra
+                            ORDER BY ra.id DESC
+                            LIMIT 1
+                        )
+                    )) AS deleted,
+                    rwt.id as watch_id
+                FROM `{R_TABS_T}` AS rt
+                LEFT JOIN `{R_WATCHED_TABS_T}` as rwt
+                ON rwt.tab_roadmap_id = rt.roadmap_id;
+                "
+            ),
+            params!(),
+        )
+        .await?;
+
+    let mut tabs = Vec::new();
+    while let Some(r) = result.next().await? {
+        let t = de::from_row::<RTab>(&r)?;
+        tabs.push(t);
+    }
+
+    Ok(tabs)
+}
+
+pub async fn get_roadmap_activity_tabs(
     db: impl Deref<Target = Connection>,
-    activity_id: u32,
+    roadmap_activity_id: u32,
 ) -> Result<Vec<RTab>, DatabaseError> {
     let mut result = db
         .query(
@@ -41,7 +79,7 @@ pub async fn get_roadmap_tabs(
                 WHERE ra.activity_id = ?1
                 "
             ),
-            [activity_id],
+            [roadmap_activity_id],
         )
         .await?;
 
@@ -52,24 +90,6 @@ pub async fn get_roadmap_tabs(
     }
 
     Ok(tabs)
-}
-
-pub async fn get_most_recent_roadmap_tabs(
-    db: impl Deref<Target = Connection>,
-) -> Result<Vec<RTab>, DatabaseError> {
-    let mut result = db
-        .query(
-            &format!("SELECT * FROM {R_ACTIVITIES_T} ORDER BY id DESC LIMIT 1"),
-            params!(),
-        )
-        .await?;
-    let Some(r) = result.next().await? else {
-        return Ok(Vec::default());
-    };
-
-    let activity: RoadmapActivity = de::from_row(&r)?;
-
-    get_roadmap_tabs(db, activity.id).await
 }
 
 pub async fn add_watched_tab(

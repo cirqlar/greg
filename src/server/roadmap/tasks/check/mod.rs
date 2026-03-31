@@ -8,7 +8,7 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 use crate::AppData;
-use crate::roadmap::queries::roadmap;
+use crate::roadmap::queries::{activity, roadmap};
 use crate::roadmap::types::RChange;
 use crate::shared::DatabaseError;
 
@@ -83,7 +83,7 @@ pub async fn check_roadmap(data: &AppData) -> Result<(), CheckRoadmapError> {
         }
 
         let tx = make_transation(data).await?;
-        let new_roadmap_id = roadmap::new_activity(tx.deref())
+        let new_roadmap_id = activity::add_activity(tx.deref())
             .await
             .map_err(changes::SaveChangesError::DatabaseError)?;
 

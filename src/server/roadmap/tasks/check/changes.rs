@@ -99,7 +99,7 @@ pub async fn handle_tab_changes(
 
                     tab_ids.insert(tab.id.clone(), tab_id);
 
-                    changes::save_change(
+                    changes::add_change(
                         db.deref(),
                         ChangeInfo {
                             activity_id: new_roadmap_id,
@@ -113,7 +113,7 @@ pub async fn handle_tab_changes(
                 }
                 TabChange::Removed { tab_index } => {
                     let tab_id = previous_roadmap.tabs[*tab_index as usize].db_id.unwrap();
-                    changes::save_change(
+                    changes::add_change(
                         db.deref(),
                         ChangeInfo {
                             activity_id: new_roadmap_id,
@@ -160,7 +160,7 @@ pub async fn handle_card_changes(
                 CardChange::Unchanged { tab_id, card_index } => {
                     let card = &previous_roadmap.cards.get(tab_id).unwrap()[*card_index as usize];
 
-                    cards::save_card_assignment(
+                    cards::assign_card(
                         db.deref(),
                         card.db_id.unwrap(),
                         CardAssignmentInfo {
@@ -175,7 +175,7 @@ pub async fn handle_card_changes(
                 CardChange::Added { tab_id, card_index } => {
                     let card = &new_roadmap.cards.get(tab_id).unwrap()[*card_index as usize];
 
-                    let card_id = cards::save_card_and_assignment(
+                    let card_id = cards::add_and_assign_card(
                         db.deref(),
                         card,
                         CardAssignmentInfo {
@@ -204,7 +204,7 @@ pub async fn handle_card_changes(
 
                     let card =
                         &new_roadmap.cards.get(tab_id).unwrap()[*current_card_index as usize];
-                    let card_id = cards::save_card_and_assignment(
+                    let card_id = cards::add_and_assign_card(
                         db.deref(),
                         card,
                         CardAssignmentInfo {
@@ -226,7 +226,7 @@ pub async fn handle_card_changes(
                     let tab_id = tab_ids.get(tab_roadmap_id).unwrap();
                     let cards = new_roadmap.cards.get(tab_roadmap_id).unwrap();
 
-                    cards::save_all_cards_for_tab(db.deref(), new_roadmap_id, *tab_id, cards)
+                    cards::add_and_assign_tab_cards(db.deref(), new_roadmap_id, *tab_id, cards)
                         .await?;
 
                     continue;
@@ -242,7 +242,7 @@ pub async fn handle_card_changes(
 
         // Save change
         if change_info.previous_card_id.is_some() || change_info.current_card_id.is_some() {
-            changes::save_change(db.deref(), change_info).await?;
+            changes::add_change(db.deref(), change_info).await?;
         }
     }
 

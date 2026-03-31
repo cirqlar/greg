@@ -29,6 +29,8 @@ export type TRTab = {
 	name: string;
 	slug: string;
 	db_id: number;
+	deleted: boolean;
+	watch_id: number | null;
 };
 
 export type TTabChange = {
