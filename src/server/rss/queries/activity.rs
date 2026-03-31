@@ -195,9 +195,9 @@ mod tests {
         Ok(())
     }
 
-    /// Currently fails, will be fixed in a future migration.
     #[rstest]
     #[tokio::test]
+    #[ignore = "Currently fails intentionally, will be fixed in a future migration"]
     async fn can_not_add_activity_for_non_existent_source(
         #[future(awt)] empty_db: Connection,
     ) -> Result<(), DatabaseError> {
