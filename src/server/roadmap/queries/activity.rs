@@ -113,4 +113,79 @@ mod tests {
 
         Ok(())
     }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_activity(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let id = add_activity(&empty_db).await?;
+
+        let activity = get_roadmap_activity(&empty_db, u32::MAX, 0).await?;
+
+        assert_eq!(activity.len(), 1);
+        assert_eq!(activity[0].id, id);
+        let difference = activity[0].timestamp - now;
+        assert!(difference.abs() < 1.minutes());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_empty_activity(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let activity = get_roadmap_activity(&empty_db, u32::MAX, 0).await?;
+
+        assert_eq!(activity.len(), 0);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_activity_with_limit(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        const ACTIVITY_COUNT: usize = 4;
+
+        let mut activity_ids = Vec::with_capacity(ACTIVITY_COUNT);
+        for _ in 0..ACTIVITY_COUNT {
+            activity_ids.push(add_activity(&empty_db).await?);
+        }
+
+        let activity = get_roadmap_activity(&empty_db, 2, 0).await?;
+
+        assert_eq!(activity.len(), 2);
+
+        for act in activity {
+            assert!(activity_ids[2..].contains(&act.id));
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_activity_with_skip(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        const ACTIVITY_COUNT: usize = 4;
+
+        let mut activity_ids = Vec::with_capacity(ACTIVITY_COUNT);
+        for _ in 0..ACTIVITY_COUNT {
+            activity_ids.push(add_activity(&empty_db).await?);
+        }
+
+        let activity = get_roadmap_activity(&empty_db, 2, 2).await?;
+
+        assert_eq!(activity.len(), 2);
+
+        for act in activity {
+            assert!(activity_ids[..2].contains(&act.id));
+        }
+
+        Ok(())
+    }
 }
