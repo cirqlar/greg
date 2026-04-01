@@ -178,3 +178,312 @@ pub async fn delete_watched_tab(
     .await
     .map_err(|e| e.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use libsql::Value;
+    use rstest::rstest;
+    use time::ext::NumericalDuration;
+
+    use super::super::activity::add_activity;
+    use super::*;
+    use crate::db::tests::empty_db;
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_tab(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let tab_name = "fake tab";
+        let tab = make_tab(tab_name);
+
+        let id = add_tab(&empty_db, &tab).await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        id,
+                        roadmap_id,
+                        name,
+                        slug,
+                        timestamp
+                    FROM `{R_TABS_T}`
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get tab");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(db_roadmap_id) = row.get_value(1)? {
+            assert_eq!(db_roadmap_id.as_str(), tab_name);
+        } else {
+            panic!("roadmap_id isn't text");
+        }
+
+        if let Value::Text(name) = row.get_value(2)? {
+            assert_eq!(name.as_str(), tab_name);
+        } else {
+            panic!("name isn't text");
+        }
+
+        if let Value::Text(slug) = row.get_value(3)? {
+            assert_eq!(slug.as_str(), tab_name);
+        } else {
+            panic!("slug isn't text");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(4)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_assign_tab(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let parent_activity_id = add_activity(&empty_db).await?;
+        let tab_name = "fake_tab";
+        let tab_id = add_tab(&empty_db, &make_tab(tab_name)).await?;
+
+        let rows_affected = assign_tab(&empty_db, parent_activity_id, tab_id).await?;
+
+        assert_eq!(rows_affected, 1);
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        tab_id,
+                        activity_id,
+                        timestamp
+                    FROM {R_TAB_ASSIGNS_T}
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get tab assignment");
+        };
+
+        if let Value::Integer(tab_db_id) = row.get_value(0)? {
+            assert_eq!(tab_db_id, tab_id as i64);
+        } else {
+            panic!("tab_id isn't an integer");
+        }
+
+        if let Value::Integer(parent_activity_db_id) = row.get_value(1)? {
+            assert_eq!(parent_activity_db_id, parent_activity_id as i64);
+        } else {
+            panic!("activity_id isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(2)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_assign_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let result = assign_tab(&empty_db, parent_activity_id, 0).await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_assign_to_non_existent_activity(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let tab_name = "fake_tab";
+        let tab_id = add_tab(&empty_db, &make_tab(tab_name)).await?;
+
+        let result = assign_tab(&empty_db, 0, tab_id).await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_and_assign_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake tab";
+        let tab = make_tab(tab_name);
+
+        let id = add_and_assign_tab(&empty_db, &tab, parent_activity_id).await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        id,
+                        roadmap_id,
+                        name,
+                        slug,
+                        timestamp
+                    FROM `{R_TABS_T}`
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get tab");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(db_roadmap_id) = row.get_value(1)? {
+            assert_eq!(db_roadmap_id.as_str(), tab_name);
+        } else {
+            panic!("roadmap_id isn't text");
+        }
+
+        if let Value::Text(name) = row.get_value(2)? {
+            assert_eq!(name.as_str(), tab_name);
+        } else {
+            panic!("name isn't text");
+        }
+
+        if let Value::Text(slug) = row.get_value(3)? {
+            assert_eq!(slug.as_str(), tab_name);
+        } else {
+            panic!("slug isn't text");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(4)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        tab_id,
+                        activity_id,
+                        timestamp
+                    FROM {R_TAB_ASSIGNS_T}
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get tab assignment");
+        };
+
+        if let Value::Integer(tab_db_id) = row.get_value(0)? {
+            assert_eq!(tab_db_id, id as i64);
+        } else {
+            panic!("tab_id isn't an integer");
+        }
+
+        if let Value::Integer(parent_activity_db_id) = row.get_value(1)? {
+            assert_eq!(parent_activity_db_id, parent_activity_id as i64);
+        } else {
+            panic!("activity_id isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(2)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_to_non_existent_activity(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let tab_name = "fake tab";
+        let tab = make_tab(tab_name);
+
+        let result = add_and_assign_tab(&empty_db, &tab, 0).await;
+
+        assert!(result.is_err());
+
+        let mut rows = empty_db
+            .query(&format!("SELECT * FROM `{R_TABS_T}`"), params!())
+            .await?;
+
+        assert!(rows.next().await?.is_none());
+
+        Ok(())
+    }
+
+    // ------- Util -------
+    fn make_tab(tab_name: &str) -> RTab {
+        RTab {
+            id: tab_name.to_string(),
+            name: tab_name.to_string(),
+            slug: tab_name.to_string(),
+            db_id: None,
+            deleted: None,
+            watch_id: None,
+        }
+    }
+}
