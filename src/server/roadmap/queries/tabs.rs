@@ -60,11 +60,23 @@ pub async fn add_and_assign_tab(
     tab: &RTab,
     activity_id: u32,
 ) -> Result<u32, DatabaseError> {
-    let tab_id = add_tab(db.deref(), tab).await?;
+    let internal_fn = async |db: &Connection| -> Result<u32, DatabaseError> {
+        let tab_id = add_tab(db, tab).await?;
 
-    assign_tab(db, activity_id, tab_id).await?;
+        assign_tab(db, activity_id, tab_id).await?;
 
-    Ok(tab_id)
+        Ok(tab_id)
+    };
+
+    // If not in a transaction, start a transaction
+    if db.is_autocommit() {
+        let tx = db.transaction().await?;
+        let tab_id = internal_fn(tx.deref()).await?;
+        tx.commit().await?;
+        Ok(tab_id)
+    } else {
+        internal_fn(db.deref()).await
+    }
 }
 
 pub async fn get_watched_tabs(
