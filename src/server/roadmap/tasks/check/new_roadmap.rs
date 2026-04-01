@@ -26,7 +26,7 @@ pub async fn save_new_roadmap(
 
     let mut tab_ids: HashMap<String, u32> = HashMap::new();
     for tab in roadmap.tabs.iter() {
-        let tab_id = tabs::save_tab_and_assignment(db.deref(), tab, roadmap_id).await?;
+        let tab_id = tabs::add_and_assign_tab(db.deref(), tab, roadmap_id).await?;
 
         tab_ids.insert(tab.id.clone(), tab_id);
     }

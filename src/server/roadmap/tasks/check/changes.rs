@@ -89,13 +89,12 @@ pub async fn handle_tab_changes(
                 TabChange::Unchanged { tab_index } => {
                     let tab_id = previous_roadmap.tabs[*tab_index as usize].db_id.unwrap();
 
-                    tabs::save_tab_assignment(db.deref(), new_roadmap_id, tab_id).await?;
+                    tabs::assign_tab(db.deref(), new_roadmap_id, tab_id).await?;
                 }
                 TabChange::Added { tab_index } => {
                     let tab = &new_roadmap.tabs[*tab_index as usize];
 
-                    let tab_id =
-                        tabs::save_tab_and_assignment(db.deref(), tab, new_roadmap_id).await?;
+                    let tab_id = tabs::add_and_assign_tab(db.deref(), tab, new_roadmap_id).await?;
 
                     tab_ids.insert(tab.id.clone(), tab_id);
 
