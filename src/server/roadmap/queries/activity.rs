@@ -22,7 +22,7 @@ pub async fn add_activity(db: impl Deref<Target = Connection>) -> Result<u32, Da
         )
         .await?;
 
-    let r = result.next().await?.unwrap();
+    let r = result.next().await?.ok_or(DatabaseError::RowError)?;
 
     Ok(r.get(0)?)
 }

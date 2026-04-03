@@ -31,7 +31,7 @@ async fn add_card(db: impl Deref<Target = Connection>, card: &RCard) -> Result<u
         )
         .await?;
 
-    let r = result.next().await?.unwrap();
+    let r = result.next().await?.ok_or(DatabaseError::RowError)?;
 
     Ok(r.get(0)?)
 }

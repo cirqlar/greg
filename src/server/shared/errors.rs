@@ -10,4 +10,7 @@ pub enum DatabaseError {
 
     #[error("Parsing database return failed")]
     JsonParse(#[from] serde_json::Error),
+
+    #[error("Could not retrieve row from query")]
+    RowError,
 }

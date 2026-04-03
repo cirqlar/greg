@@ -27,7 +27,7 @@ async fn add_tab(db: impl Deref<Target = Connection>, tab: &RTab) -> Result<u32,
         )
         .await?;
 
-    let r = result.next().await?.unwrap();
+    let r = result.next().await?.ok_or(DatabaseError::RowError)?;
 
     Ok(r.get(0)?)
 }
@@ -99,7 +99,7 @@ pub async fn add_watched_tab(
         )
         .await?;
 
-    let row = rows.next().await?.unwrap();
+    let row = rows.next().await?.ok_or(DatabaseError::RowError)?;
 
     Ok(row.get(0)?)
 }
