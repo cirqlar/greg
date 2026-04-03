@@ -79,20 +79,29 @@ pub async fn add_and_assign_tab(
     }
 }
 
-pub async fn get_watched_tabs(
+pub async fn add_watched_tab(
     db: impl Deref<Target = Connection>,
-) -> Result<Vec<RoadmapWatchedTab>, DatabaseError> {
-    let mut result = db
-        .query(&format!("SELECT * FROM {R_WATCHED_TABS_T}"), params!())
+    tab_roadmap_id: String,
+) -> Result<u32, DatabaseError> {
+    let mut rows = db
+        .query(
+            &format!(
+                "INSERT INTO {R_WATCHED_TABS_T} 
+                    (tab_roadmap_id, timestamp) 
+                VALUES 
+                    (?1, ?2)
+                RETURNING id"
+            ),
+            [
+                tab_roadmap_id,
+                serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
+            ],
+        )
         .await?;
 
-    let mut tabs = Vec::new();
-    while let Some(r) = result.next().await? {
-        let wts: RoadmapWatchedTab = de::from_row(&r)?;
-        tabs.push(wts);
-    }
+    let row = rows.next().await?.unwrap();
 
-    Ok(tabs)
+    Ok(row.get(0)?)
 }
 
 pub async fn get_tabs(db: impl Deref<Target = Connection>) -> Result<Vec<RTab>, DatabaseError> {
@@ -164,19 +173,20 @@ pub async fn get_roadmap_activity_tabs(
     Ok(tabs)
 }
 
-pub async fn add_watched_tab(
+pub async fn get_watched_tabs(
     db: impl Deref<Target = Connection>,
-    tab_roadmap_id: String,
-) -> Result<u64, DatabaseError> {
-    db.execute(
-        &format!("INSERT INTO {R_WATCHED_TABS_T} (tab_roadmap_id, timestamp) VALUES (?1, ?2)"),
-        [
-            tab_roadmap_id,
-            serde_json::to_string(&OffsetDateTime::now_utc()).unwrap(),
-        ],
-    )
-    .await
-    .map_err(|e| e.into())
+) -> Result<Vec<RoadmapWatchedTab>, DatabaseError> {
+    let mut result = db
+        .query(&format!("SELECT * FROM {R_WATCHED_TABS_T}"), params!())
+        .await?;
+
+    let mut tabs = Vec::new();
+    while let Some(r) = result.next().await? {
+        let wts: RoadmapWatchedTab = de::from_row(&r)?;
+        tabs.push(wts);
+    }
+
+    Ok(tabs)
 }
 
 pub async fn delete_watched_tab(
@@ -192,7 +202,7 @@ pub async fn delete_watched_tab(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use libsql::Value;
     use rstest::rstest;
     use time::ext::NumericalDuration;
@@ -487,8 +497,168 @@ mod tests {
         Ok(())
     }
 
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_watched_tab(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake tab";
+        let tab = make_tab(tab_name);
+        add_and_assign_tab(&empty_db, &tab, parent_activity_id).await?;
+
+        let id = add_watched_tab(&empty_db, tab_name.to_string()).await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!("SELECT id, tab_roadmap_id, timestamp FROM {R_WATCHED_TABS_T}"),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Coundn't retrieve watched tab");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(tab_roadmap_id) = row.get_value(1)? {
+            assert_eq!(tab_roadmap_id.as_str(), tab_name);
+        } else {
+            panic!("tab_roadmap_id isn't text")
+        }
+
+        if let Value::Text(timestamp) = row.get_value(2)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_tabs(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names.iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id).await?,
+            );
+        }
+
+        let tabs = get_tabs(&empty_db).await?;
+
+        assert_eq!(tabs.len(), tab_names.len());
+
+        for tab in tabs {
+            assert!(tab_names.contains(&tab.name.as_str()));
+            assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
+            assert!(!tab.deleted.expect("tab from db should have deleted"));
+            assert!(tab.watch_id.is_none());
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn get_tabs_marks_watched_tabs_correctly(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names.iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id).await?,
+            );
+        }
+
+        for tab_name in tab_names[..2].iter() {
+            add_watched_tab(&empty_db, tab_name.to_string()).await?;
+        }
+
+        let tabs = get_tabs(&empty_db).await?;
+
+        assert_eq!(tabs.len(), tab_names.len());
+
+        for tab in tabs {
+            assert!(tab_names.contains(&tab.name.as_str()));
+            assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
+            assert!(!tab.deleted.expect("tab from db should have deleted"));
+
+            if tab_names[..2].contains(&tab.name.as_str()) {
+                assert!(tab.watch_id.is_some());
+            } else {
+                assert!(tab.watch_id.is_none());
+            }
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn get_tabs_handles_deleted_tabs_correctly(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id_1 = add_activity(&empty_db).await?;
+        let parent_activity_id_2 = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names[..2].iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id_1).await?,
+            );
+        }
+
+        for tab_name in tab_names[2..].iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id_2).await?,
+            );
+        }
+
+        let tabs = get_tabs(&empty_db).await?;
+
+        assert_eq!(tabs.len(), tab_names.len());
+
+        for tab in tabs {
+            assert!(tab_names.contains(&tab.name.as_str()));
+            assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
+            assert!(tab.watch_id.is_none());
+
+            if tab_names[..2].contains(&tab.name.as_str()) {
+                assert!(tab.deleted.expect("tab from db should have deleted"));
+            } else {
+                assert!(!tab.deleted.expect("tab from db should have deleted"));
+            }
+        }
+
+        Ok(())
+    }
+
     // ------- Util -------
-    fn make_tab(tab_name: &str) -> RTab {
+    pub fn make_tab(tab_name: &str) -> RTab {
         RTab {
             id: tab_name.to_string(),
             name: tab_name.to_string(),
