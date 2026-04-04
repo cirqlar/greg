@@ -566,6 +566,7 @@ pub mod tests {
         for tab in tabs {
             assert!(tab_names.contains(&tab.name.as_str()));
             assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_names.contains(&tab.id.as_str()));
             assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
             assert!(!tab.deleted.expect("tab from db should have deleted"));
             assert!(tab.watch_id.is_none());
@@ -601,6 +602,7 @@ pub mod tests {
         for tab in tabs {
             assert!(tab_names.contains(&tab.name.as_str()));
             assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_names.contains(&tab.id.as_str()));
             assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
             assert!(!tab.deleted.expect("tab from db should have deleted"));
 
@@ -644,6 +646,7 @@ pub mod tests {
         for tab in tabs {
             assert!(tab_names.contains(&tab.name.as_str()));
             assert!(tab_names.contains(&tab.slug.as_str()));
+            assert!(tab_names.contains(&tab.id.as_str()));
             assert!(tab_ids.contains(&tab.db_id.expect("tab from db should have id")));
             assert!(tab.watch_id.is_none());
 
@@ -653,6 +656,119 @@ pub mod tests {
                 assert!(!tab.deleted.expect("tab from db should have deleted"));
             }
         }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_roadmap_activity_tabs(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id_1 = add_activity(&empty_db).await?;
+        let parent_activity_id_2 = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names[..2].iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id_1).await?,
+            );
+        }
+
+        for tab_name in tab_names[2..].iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id_2).await?,
+            );
+        }
+
+        let tabs = get_roadmap_activity_tabs(&empty_db, parent_activity_id_2).await?;
+
+        assert_eq!(tabs.len(), tab_names[2..].len());
+        for tab in tabs {
+            assert!(tab_names[2..].contains(&tab.name.as_str()));
+            assert!(tab_names[2..].contains(&tab.slug.as_str()));
+            assert!(tab_names[2..].contains(&tab.id.as_str()));
+            assert!(tab_ids[2..].contains(&tab.db_id.expect("type from db should have db id set")));
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_empty_roadmap_activity_tabs(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let tabs = get_roadmap_activity_tabs(&empty_db, 0).await?;
+
+        assert!(tabs.is_empty());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_watched_tabs(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names.iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id).await?,
+            );
+        }
+
+        for tab_name in tab_names[..2].iter() {
+            add_watched_tab(&empty_db, tab_name.to_string()).await?;
+        }
+
+        let watched_tabs = get_watched_tabs(&empty_db).await?;
+
+        assert_eq!(watched_tabs.len(), 2);
+
+        for watched_tab in watched_tabs {
+            assert!(tab_names[..2].contains(&watched_tab.tab_id.as_str()));
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_delete_watched_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_names = ["fake_tab_1", "fake_tab_2", "fake_tab_3", "fake_tab_4"];
+        let mut tab_ids = vec![];
+
+        for tab_name in tab_names.iter() {
+            tab_ids.push(
+                add_and_assign_tab(&empty_db, &make_tab(tab_name), parent_activity_id).await?,
+            );
+        }
+
+        let mut watch_ids = vec![];
+
+        for tab_name in tab_names[..2].iter() {
+            watch_ids.push(add_watched_tab(&empty_db, tab_name.to_string()).await?);
+        }
+
+        let rows_affected = delete_watched_tab(&empty_db, watch_ids[0]).await?;
+
+        assert_eq!(rows_affected, 1);
+
+        let watched_tabs = get_watched_tabs(&empty_db).await?;
+
+        assert_eq!(watched_tabs.len(), 1);
+        assert_eq!(watched_tabs[0].id, watch_ids[1]);
 
         Ok(())
     }
