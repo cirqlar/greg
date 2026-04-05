@@ -154,3 +154,742 @@ pub async fn get_roadmap_activity_cards(
 
     Ok(cards)
 }
+
+#[cfg(test)]
+pub mod tests {
+    use libsql::{Value, params};
+    use rstest::rstest;
+    use time::ext::NumericalDuration;
+
+    use super::super::activity::add_activity;
+    use super::super::tabs::{add_and_assign_tab, tests::make_tab};
+    use super::*;
+    use crate::db::tests::empty_db;
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_card(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let card_name = "fake card";
+        let card = make_card(card_name, 0);
+
+        let id = add_card(&empty_db, &card).await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        id,
+                        roadmap_id,
+                        name,
+                        description,
+                        image_url,
+                        slug,
+                        timestamp
+                    FROM `{R_CARDS_T}`
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(db_roadmap_id) = row.get_value(1)? {
+            assert_eq!(db_roadmap_id.as_str(), card_name);
+        } else {
+            panic!("roadmap_id isn't text");
+        }
+
+        if let Value::Text(name) = row.get_value(2)? {
+            assert_eq!(name.as_str(), card_name);
+        } else {
+            panic!("name isn't text");
+        }
+
+        if let Value::Text(description) = row.get_value(3)? {
+            assert_eq!(description.as_str(), card_name);
+        } else {
+            panic!("description isn't text");
+        }
+
+        if let Value::Text(image) = row.get_value(4)? {
+            assert_eq!(image.as_str(), card_name);
+        } else {
+            panic!("image isn't text");
+        }
+
+        if let Value::Text(slug) = row.get_value(5)? {
+            assert_eq!(slug.as_str(), card_name);
+        } else {
+            panic!("slug isn't text");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(6)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_assign_card(#[future(awt)] empty_db: Connection) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+
+        let parent_activity_id = add_activity(&empty_db).await?;
+        let tab_id =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab"), parent_activity_id).await?;
+
+        let card_name = "fake_card";
+        let card_id = add_card(&empty_db, &make_card(card_name, 0)).await?;
+
+        let rows_affected = assign_card(
+            &empty_db,
+            card_id,
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await?;
+
+        assert_eq!(rows_affected, 1);
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        tab_id,
+                        activity_id,
+                        card_id,
+                        section_position,
+                        card_position,
+                        timestamp
+                    FROM {R_CARD_ASSIGNS_T}
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card assignment");
+        };
+
+        if let Value::Integer(tab_db_id) = row.get_value(0)? {
+            assert_eq!(tab_db_id, tab_id as i64);
+        } else {
+            panic!("tab_id isn't an integer");
+        }
+
+        if let Value::Integer(parent_activity_db_id) = row.get_value(1)? {
+            assert_eq!(parent_activity_db_id, parent_activity_id as i64);
+        } else {
+            panic!("activity_id isn't an integer");
+        }
+
+        if let Value::Integer(card_db_id) = row.get_value(2)? {
+            assert_eq!(card_db_id, card_id as i64);
+        } else {
+            panic!("card_id isn't an integer");
+        }
+
+        if let Value::Integer(section_position) = row.get_value(3)? {
+            assert_eq!(section_position, 0);
+        } else {
+            panic!("section_position isn't an integer");
+        }
+
+        if let Value::Integer(card_position) = row.get_value(4)? {
+            assert_eq!(card_position, 0);
+        } else {
+            panic!("card_position isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(5)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_assign_non_existent_card(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+        let tab_id =
+            add_and_assign_tab(&empty_db, &make_tab("fake tab"), parent_activity_id).await?;
+
+        let result = assign_card(
+            &empty_db,
+            0,
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_assign_to_non_existent_activity_and_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let card_name = "fake_card";
+        let card_id = add_card(&empty_db, &make_card(card_name, 0)).await?;
+
+        let result = assign_card(
+            &empty_db,
+            card_id,
+            CardAssignmentInfo {
+                activity_id: 0,
+                tab_id: 0,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_assign_to_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let card_name = "fake_card";
+        let card_id = add_card(&empty_db, &make_card(card_name, 0)).await?;
+
+        let result = assign_card(
+            &empty_db,
+            card_id,
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id: 0,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_and_assign_card(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+        let parent_activity_id = add_activity(&empty_db).await?;
+        let tab_id =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab"), parent_activity_id).await?;
+
+        let card_name = "fake_card";
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &make_card(card_name, 0),
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        id,
+                        roadmap_id,
+                        name,
+                        description,
+                        image_url,
+                        slug,
+                        timestamp
+                    FROM `{R_CARDS_T}`
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, card_id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(db_roadmap_id) = row.get_value(1)? {
+            assert_eq!(db_roadmap_id.as_str(), card_name);
+        } else {
+            panic!("roadmap_id isn't text");
+        }
+
+        if let Value::Text(name) = row.get_value(2)? {
+            assert_eq!(name.as_str(), card_name);
+        } else {
+            panic!("name isn't text");
+        }
+
+        if let Value::Text(description) = row.get_value(3)? {
+            assert_eq!(description.as_str(), card_name);
+        } else {
+            panic!("description isn't text");
+        }
+
+        if let Value::Text(image) = row.get_value(4)? {
+            assert_eq!(image.as_str(), card_name);
+        } else {
+            panic!("image isn't text");
+        }
+
+        if let Value::Text(slug) = row.get_value(5)? {
+            assert_eq!(slug.as_str(), card_name);
+        } else {
+            panic!("slug isn't text");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(6)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        tab_id,
+                        activity_id,
+                        card_id,
+                        section_position,
+                        card_position,
+                        timestamp
+                    FROM {R_CARD_ASSIGNS_T}
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card assignment");
+        };
+
+        if let Value::Integer(tab_db_id) = row.get_value(0)? {
+            assert_eq!(tab_db_id, tab_id as i64);
+        } else {
+            panic!("tab_id isn't an integer");
+        }
+
+        if let Value::Integer(parent_activity_db_id) = row.get_value(1)? {
+            assert_eq!(parent_activity_db_id, parent_activity_id as i64);
+        } else {
+            panic!("activity_id isn't an integer");
+        }
+
+        if let Value::Integer(card_db_id) = row.get_value(2)? {
+            assert_eq!(card_db_id, card_id as i64);
+        } else {
+            panic!("card_id isn't an integer");
+        }
+
+        if let Value::Integer(section_position) = row.get_value(3)? {
+            assert_eq!(section_position, 0);
+        } else {
+            panic!("section_position isn't an integer");
+        }
+
+        if let Value::Integer(card_position) = row.get_value(4)? {
+            assert_eq!(card_position, 0);
+        } else {
+            panic!("card_position isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(5)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_and_assign_card_within_transaction(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+        let parent_activity_id = add_activity(&empty_db).await?;
+        let tab_id =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab"), parent_activity_id).await?;
+
+        let tx = empty_db.transaction().await?;
+
+        let card_name = "fake_card";
+        let card_id = add_and_assign_card(
+            tx.deref(),
+            &make_card(card_name, 0),
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await?;
+
+        tx.commit().await?;
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        id,
+                        roadmap_id,
+                        name,
+                        description,
+                        image_url,
+                        slug,
+                        timestamp
+                    FROM `{R_CARDS_T}`
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card");
+        };
+
+        if let Value::Integer(db_id) = row.get_value(0)? {
+            assert_eq!(db_id, card_id as i64);
+        } else {
+            panic!("id isn't an integer");
+        }
+
+        if let Value::Text(db_roadmap_id) = row.get_value(1)? {
+            assert_eq!(db_roadmap_id.as_str(), card_name);
+        } else {
+            panic!("roadmap_id isn't text");
+        }
+
+        if let Value::Text(name) = row.get_value(2)? {
+            assert_eq!(name.as_str(), card_name);
+        } else {
+            panic!("name isn't text");
+        }
+
+        if let Value::Text(description) = row.get_value(3)? {
+            assert_eq!(description.as_str(), card_name);
+        } else {
+            panic!("description isn't text");
+        }
+
+        if let Value::Text(image) = row.get_value(4)? {
+            assert_eq!(image.as_str(), card_name);
+        } else {
+            panic!("image isn't text");
+        }
+
+        if let Value::Text(slug) = row.get_value(5)? {
+            assert_eq!(slug.as_str(), card_name);
+        } else {
+            panic!("slug isn't text");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(6)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        tab_id,
+                        activity_id,
+                        card_id,
+                        section_position,
+                        card_position,
+                        timestamp
+                    FROM {R_CARD_ASSIGNS_T}
+                    "
+                ),
+                params!(),
+            )
+            .await?;
+
+        let Some(row) = rows.next().await? else {
+            panic!("Could not get card assignment");
+        };
+
+        if let Value::Integer(tab_db_id) = row.get_value(0)? {
+            assert_eq!(tab_db_id, tab_id as i64);
+        } else {
+            panic!("tab_id isn't an integer");
+        }
+
+        if let Value::Integer(parent_activity_db_id) = row.get_value(1)? {
+            assert_eq!(parent_activity_db_id, parent_activity_id as i64);
+        } else {
+            panic!("activity_id isn't an integer");
+        }
+
+        if let Value::Integer(card_db_id) = row.get_value(2)? {
+            assert_eq!(card_db_id, card_id as i64);
+        } else {
+            panic!("card_id isn't an integer");
+        }
+
+        if let Value::Integer(section_position) = row.get_value(3)? {
+            assert_eq!(section_position, 0);
+        } else {
+            panic!("section_position isn't an integer");
+        }
+
+        if let Value::Integer(card_position) = row.get_value(4)? {
+            assert_eq!(card_position, 0);
+        } else {
+            panic!("card_position isn't an integer");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(5)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp isn't text");
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_to_non_existent_activity_and_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let card_name = "fake card";
+        let card = make_card(card_name, 0);
+
+        let result = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: 0,
+                tab_id: 0,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        let mut rows = empty_db
+            .query(&format!("SELECT * FROM `{R_CARDS_T}`"), params!())
+            .await?;
+
+        assert!(rows.next().await?.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_to_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let card_name = "fake card";
+        let card = make_card(card_name, 0);
+
+        let result = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: parent_activity_id,
+                tab_id: 0,
+                section_pos: 0,
+                card_pos: 0,
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+
+        let mut rows = empty_db
+            .query(&format!("SELECT * FROM `{R_CARDS_T}`"), params!())
+            .await?;
+
+        assert!(rows.next().await?.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_roadmap_activity_cards(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id_1 = add_activity(&empty_db).await?;
+        let parent_activity_id_2 = add_activity(&empty_db).await?;
+
+        let tab_id_1 =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab_1"), parent_activity_id_1).await?;
+        let tab_id_2 =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab_2"), parent_activity_id_2).await?;
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let mut card_ids = vec![];
+
+        for (pos, card_name) in card_names[..2].iter().enumerate() {
+            let pos = pos as u32;
+            card_ids.push(
+                add_and_assign_card(
+                    &empty_db,
+                    &make_card(card_name, pos),
+                    CardAssignmentInfo {
+                        activity_id: parent_activity_id_1,
+                        tab_id: tab_id_1,
+                        section_pos: pos,
+                        card_pos: pos,
+                    },
+                )
+                .await?,
+            );
+        }
+
+        for (pos, card_name) in card_names[2..].iter().enumerate() {
+            let pos = (pos + 2) as u32;
+            card_ids.push(
+                add_and_assign_card(
+                    &empty_db,
+                    &make_card(card_name, pos),
+                    CardAssignmentInfo {
+                        activity_id: parent_activity_id_2,
+                        tab_id: tab_id_2,
+                        section_pos: pos,
+                        card_pos: pos,
+                    },
+                )
+                .await?,
+            );
+        }
+
+        let cards = get_roadmap_activity_cards(&empty_db, parent_activity_id_2).await?;
+
+        assert_eq!(cards.len(), card_names[2..].len());
+        for card in cards {
+            assert!(card_names[2..].contains(&card.name.as_str()));
+            assert!(card_names[2..].contains(&card.slug.as_str()));
+            assert!(card_names[2..].contains(&card.id.as_str()));
+            assert!(card_names[2..].contains(&card.image_url.expect("has image").as_str()));
+            assert!(card_names[2..].contains(&card.description.as_str()));
+            assert!(
+                card_ids[2..].contains(&card.db_id.expect("type from db should have db id set"))
+            );
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_empty_roadmap_activity_cards(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let cards = get_roadmap_activity_cards(&empty_db, 0).await?;
+
+        assert!(cards.is_empty());
+
+        Ok(())
+    }
+
+    // ------- Util -------
+    pub fn make_card(card_title: &str, card_pos: u32) -> RCard {
+        RCard {
+            id: card_title.to_string(),
+            name: card_title.to_string(),
+            description: card_title.to_string(),
+            image_url: Some(card_title.to_string()),
+            slug: card_title.to_string(),
+            db_id: None,
+            section_position: Some(card_pos),
+            card_position: Some(card_pos),
+            assign_db_id: None,
+            tab_id: None,
+        }
+    }
+}
