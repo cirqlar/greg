@@ -877,6 +877,206 @@ pub mod tests {
         Ok(())
     }
 
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_and_assign_tab_cards(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tab_id =
+            add_and_assign_tab(&empty_db, &make_tab("fake_tab"), parent_activity_id).await?;
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        add_and_assign_tab_cards(&empty_db, parent_activity_id, tab_id, &cards).await?;
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, parent_activity_id).await?;
+
+        assert_eq!(db_cards.len(), cards.len());
+
+        for card in db_cards {
+            assert!(card_names.contains(&card.name.as_str()));
+            assert!(card_names.contains(&card.slug.as_str()));
+            assert!(card_names.contains(&card.id.as_str()));
+            assert!(card_names.contains(&card.image_url.expect("has image").as_str()));
+            assert!(card_names.contains(&card.description.as_str()));
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_tab_cards_for_non_existent_activity_and_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        let result = add_and_assign_tab_cards(&empty_db, 0, 0, &cards).await;
+        assert!(result.is_err());
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, 0).await?;
+        assert!(db_cards.is_empty());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_tab_cards_for_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        let result = add_and_assign_tab_cards(&empty_db, parent_activity_id, 0, &cards).await;
+        assert!(result.is_err());
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, parent_activity_id).await?;
+        assert!(db_cards.is_empty());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_and_assign_cards(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tabs = [make_tab("fake_tab_1"), make_tab("fake_tab_2")];
+
+        let tab_id_1 = add_and_assign_tab(&empty_db, &tabs[0], parent_activity_id).await?;
+        let tab_id_2 = add_and_assign_tab(&empty_db, &tabs[1], parent_activity_id).await?;
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        let mut cards_map = HashMap::new();
+        cards_map.insert(tabs[0].id.clone(), cards[..2].to_vec());
+        cards_map.insert(tabs[1].id.clone(), cards[2..].to_vec());
+
+        let rmap = Roadmap::with_data(tabs.to_vec(), cards_map);
+
+        let tab_roadmap_to_db_ids = HashMap::from([
+            (tabs[0].id.clone(), tab_id_1),
+            (tabs[1].id.clone(), tab_id_2),
+        ]);
+
+        add_and_assign_cards(&empty_db, &rmap, parent_activity_id, &tab_roadmap_to_db_ids).await?;
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, parent_activity_id).await?;
+
+        assert_eq!(db_cards.len(), cards.len());
+
+        for card in db_cards {
+            assert!(card_names.contains(&card.name.as_str()));
+            assert!(card_names.contains(&card.slug.as_str()));
+            assert!(card_names.contains(&card.id.as_str()));
+            assert!(card_names.contains(&card.image_url.expect("has image").as_str()));
+            assert!(card_names.contains(&card.description.as_str()));
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_cards_to_non_saved_activity_and_tabs(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let tabs = [make_tab("fake_tab_1"), make_tab("fake_tab_2")];
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        let mut cards_map = HashMap::new();
+        cards_map.insert(tabs[0].id.clone(), cards[..2].to_vec());
+        cards_map.insert(tabs[1].id.clone(), cards[2..].to_vec());
+
+        let rmap = Roadmap::with_data(tabs.to_vec(), cards_map);
+
+        let tab_roadmap_to_db_ids =
+            HashMap::from([(tabs[0].id.clone(), 0), (tabs[1].id.clone(), 1)]);
+
+        let result = add_and_assign_cards(&empty_db, &rmap, 0, &tab_roadmap_to_db_ids).await;
+        assert!(result.is_err());
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, 0).await?;
+
+        assert!(db_cards.is_empty());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_and_assign_cards_to_non_saved_tabs(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let parent_activity_id = add_activity(&empty_db).await?;
+
+        let tabs = [make_tab("fake_tab_1"), make_tab("fake_tab_2")];
+
+        let card_names = ["fake_card_1", "fake_card_2", "fake_card_3", "fake_card_4"];
+        let cards = card_names
+            .iter()
+            .enumerate()
+            .map(|(pos, card_name)| make_card(card_name, pos as u32))
+            .collect::<Vec<_>>();
+
+        let mut cards_map = HashMap::new();
+        cards_map.insert(tabs[0].id.clone(), cards[..2].to_vec());
+        cards_map.insert(tabs[1].id.clone(), cards[2..].to_vec());
+
+        let rmap = Roadmap::with_data(tabs.to_vec(), cards_map);
+
+        let tab_roadmap_to_db_ids =
+            HashMap::from([(tabs[0].id.clone(), 0), (tabs[1].id.clone(), 1)]);
+
+        let result =
+            add_and_assign_cards(&empty_db, &rmap, parent_activity_id, &tab_roadmap_to_db_ids)
+                .await;
+
+        assert!(result.is_err());
+
+        let db_cards = get_roadmap_activity_cards(&empty_db, parent_activity_id).await?;
+
+        assert!(db_cards.is_empty());
+
+        Ok(())
+    }
+
     // ------- Util -------
     pub fn make_card(card_title: &str, card_pos: u32) -> RCard {
         RCard {
