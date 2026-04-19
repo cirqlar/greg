@@ -228,7 +228,11 @@ fn format_files(
             use std::os::windows::ffi::OsStringExt;
 
             error_string.push(OsString::from_wide(
-                output.stderr.into_iter().map(|n| n as u16).collect(),
+                &output
+                    .stderr
+                    .into_iter()
+                    .map(|n| n as u16)
+                    .collect::<Vec<_>>(),
             ));
         }
 
