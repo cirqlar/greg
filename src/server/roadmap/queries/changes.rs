@@ -476,4 +476,129 @@ mod tests {
 
         Ok(())
     }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_card_modified_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let now = OffsetDateTime::now_utc();
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+        let _ = assign_tab(&empty_db, next_activity_id, tab_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: previous_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        let mut new_card = card.clone();
+        new_card.description = "Updated description".into();
+        let new_card_id = add_and_assign_card(
+            &empty_db,
+            &new_card,
+            CardAssignmentInfo {
+                activity_id: next_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        let rows_affected = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Modified {
+                    tab_id: "()".into(),
+                    previous_card_index: 0,
+                    current_card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(card_id),
+                current_card_id: Some(new_card_id),
+                tab_id: None,
+            },
+        )
+        .await?;
+
+        assert_eq!(rows_affected, 1);
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?.expect("Can get change from db");
+
+        if let Value::Text(change_type) = row.get_value(0)? {
+            assert_eq!(
+                change_type.as_str(),
+                CardChange::Modified {
+                    tab_id: "()".into(),
+                    previous_card_index: 0,
+                    current_card_index: 0
+                }
+                .as_str()
+            );
+        } else {
+            panic!("type is not text");
+        }
+
+        if let Value::Integer(db_activity_id) = row.get_value(1)? {
+            assert_eq!(db_activity_id, next_activity_id as i64);
+        } else {
+            panic!("activity_id is not integer");
+        }
+
+        if let Value::Integer(db_previous_card_id) = row.get_value(2)? {
+            assert_eq!(db_previous_card_id, card_id as i64);
+        } else {
+            panic!("previous_card_id is not integer");
+        }
+
+        if let Value::Integer(db_current_card_id) = row.get_value(3)? {
+            assert_eq!(db_current_card_id, new_card_id as i64);
+        } else {
+            panic!("current_card_id is not integer");
+        }
+
+        if row.get_value(4)? != Value::Null {
+            panic!("tab_id is not null");
+        }
+
+        if let Value::Text(timestamp) = row.get_value(5)? {
+            let timestamp = serde_json::from_str::<OffsetDateTime>(&timestamp)
+                .expect("timestamp from db can be deserialized to OffsetDateTime");
+
+            let difference = timestamp - now;
+            assert!(difference.abs() < 1.minutes());
+        } else {
+            panic!("timestamp is not text");
+        }
+
+        Ok(())
+    }
 }
