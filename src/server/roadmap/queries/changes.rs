@@ -601,4 +601,735 @@ mod tests {
 
         Ok(())
     }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_tab_added_change_for_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: TabChange::Added { tab_index: 0 }.as_str(),
+                previous_card_id: None,
+                current_card_id: None,
+                tab_id: Some(0),
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_tab_removed_change_for_non_existent_tab(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: TabChange::Removed { tab_index: 0 }.as_str(),
+                previous_card_id: None,
+                current_card_id: None,
+                tab_id: Some(0),
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_card_added_change_for_non_existent_card(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Added {
+                    tab_id: "()".into(),
+                    card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: None,
+                current_card_id: Some(0),
+                tab_id: None,
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_card_removed_change_for_non_existent_card(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Removed {
+                    tab_id: "()".into(),
+                    card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(0),
+                current_card_id: None,
+                tab_id: None,
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_card_modified_change_when_current_card_does_not_exist(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+        let _ = assign_tab(&empty_db, next_activity_id, tab_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: previous_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Modified {
+                    tab_id: "()".into(),
+                    previous_card_index: 0,
+                    current_card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(card_id),
+                current_card_id: Some(10),
+                tab_id: None,
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    #[ignore = "Currently fails intentionally. Will be fixed in a future migration"]
+    async fn can_not_add_card_modified_change_when_previous_card_does_not_exist(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+        let _ = assign_tab(&empty_db, next_activity_id, tab_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: next_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        let res = add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Modified {
+                    tab_id: "()".into(),
+                    previous_card_index: 0,
+                    current_card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(10),
+                current_card_id: Some(card_id),
+                tab_id: None,
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        let mut rows = empty_db
+            .query(
+                &format!(
+                    "SELECT
+                        type, activity_id, previous_card_id, current_card_id, tab_id, timestamp
+                    FROM {R_CHANGES_T}
+                    WHERE activity_id = ?1
+                    "
+                ),
+                [next_activity_id],
+            )
+            .await?;
+
+        let row = rows.next().await?;
+
+        assert!(row.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_tab_added_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, next_activity_id).await?;
+
+        add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: TabChange::Added { tab_index: 0 }.as_str(),
+                previous_card_id: None,
+                current_card_id: None,
+                tab_id: Some(tab_id),
+            },
+        )
+        .await?;
+
+        let changes = get_roadmap_activity_changes(&empty_db, next_activity_id).await?;
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+
+        // Type
+        assert_eq!(
+            change.r#type.as_str(),
+            TabChange::Added { tab_index: 0 }.as_str()
+        );
+
+        // Tab
+        assert_eq!(change.tab_db_id, Some(tab_id));
+        assert_eq!(change.tab_id, Some(tab_name.to_string()));
+        assert_eq!(change.tab_name, Some(tab_name.to_string()));
+        assert_eq!(change.tab_slug, Some(tab_name.to_string()));
+
+        // Card
+        assert!(change.card_tab_name.is_none());
+
+        // Previous Card
+        assert!(change.previous_card_db_id.is_none());
+        assert!(change.previous_card_description.is_none());
+        assert!(change.previous_card_id.is_none());
+        assert!(change.previous_card_image_url.is_none());
+        assert!(change.previous_card_name.is_none());
+        assert!(change.previous_card_slug.is_none());
+        // Current Card
+        assert!(change.current_card_db_id.is_none());
+        assert!(change.current_card_description.is_none());
+        assert!(change.current_card_id.is_none());
+        assert!(change.current_card_image_url.is_none());
+        assert!(change.current_card_name.is_none());
+        assert!(change.current_card_slug.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_tab_removed_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+
+        add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: TabChange::Removed { tab_index: 0 }.as_str(),
+                previous_card_id: None,
+                current_card_id: None,
+                tab_id: Some(tab_id),
+            },
+        )
+        .await?;
+
+        let changes = get_roadmap_activity_changes(&empty_db, previous_activity_id).await?;
+
+        assert!(changes.is_empty());
+
+        let changes = get_roadmap_activity_changes(&empty_db, next_activity_id).await?;
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+
+        // Type
+        assert_eq!(
+            change.r#type.as_str(),
+            TabChange::Removed { tab_index: 0 }.as_str()
+        );
+
+        // Tab
+        assert_eq!(change.tab_db_id, Some(tab_id));
+        assert_eq!(change.tab_id, Some(tab_name.to_string()));
+        assert_eq!(change.tab_name, Some(tab_name.to_string()));
+        assert_eq!(change.tab_slug, Some(tab_name.to_string()));
+
+        // Card
+        assert!(change.card_tab_name.is_none());
+
+        // Previous Card
+        assert!(change.previous_card_db_id.is_none());
+        assert!(change.previous_card_description.is_none());
+        assert!(change.previous_card_id.is_none());
+        assert!(change.previous_card_image_url.is_none());
+        assert!(change.previous_card_name.is_none());
+        assert!(change.previous_card_slug.is_none());
+        // Current Card
+        assert!(change.current_card_db_id.is_none());
+        assert!(change.current_card_description.is_none());
+        assert!(change.current_card_id.is_none());
+        assert!(change.current_card_image_url.is_none());
+        assert!(change.current_card_name.is_none());
+        assert!(change.current_card_slug.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_card_added_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, next_activity_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: next_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Added {
+                    tab_id: "()".into(),
+                    card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: None,
+                current_card_id: Some(card_id),
+                tab_id: None,
+            },
+        )
+        .await?;
+
+        let changes = get_roadmap_activity_changes(&empty_db, next_activity_id).await?;
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+
+        // Type
+        assert_eq!(
+            change.r#type.as_str(),
+            CardChange::Added {
+                tab_id: "()".into(),
+                card_index: 0,
+            }
+            .as_str()
+        );
+
+        // Tab
+        assert!(change.tab_db_id.is_none());
+        assert!(change.tab_id.is_none());
+        assert!(change.tab_name.is_none());
+        assert!(change.tab_slug.is_none());
+
+        // Card
+        assert_eq!(change.card_tab_name, Some(tab_name.to_string()));
+
+        // Previous Card
+        assert!(change.previous_card_db_id.is_none());
+        assert!(change.previous_card_description.is_none());
+        assert!(change.previous_card_id.is_none());
+        assert!(change.previous_card_image_url.is_none());
+        assert!(change.previous_card_name.is_none());
+        assert!(change.previous_card_slug.is_none());
+
+        // Current Card
+        assert_eq!(change.current_card_db_id, Some(card_id));
+        assert_eq!(change.current_card_description, Some(card_name.to_string()));
+        assert_eq!(change.current_card_id, Some(card_name.to_string()));
+        assert_eq!(change.current_card_image_url, Some(card_name.to_string()));
+        assert_eq!(change.current_card_name, Some(card_name.to_string()));
+        assert_eq!(change.current_card_slug, Some(card_name.to_string()));
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_card_removed_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+        let _ = assign_tab(&empty_db, next_activity_id, tab_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: previous_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Removed {
+                    tab_id: "()".into(),
+                    card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(card_id),
+                current_card_id: None,
+                tab_id: None,
+            },
+        )
+        .await?;
+
+        let changes = get_roadmap_activity_changes(&empty_db, previous_activity_id).await?;
+
+        assert!(changes.is_empty());
+
+        let changes = get_roadmap_activity_changes(&empty_db, next_activity_id).await?;
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+
+        // Type
+        assert_eq!(
+            change.r#type.as_str(),
+            CardChange::Removed {
+                tab_id: "()".into(),
+                card_index: 0,
+            }
+            .as_str()
+        );
+
+        // Tab
+        assert!(change.tab_db_id.is_none());
+        assert!(change.tab_id.is_none());
+        assert!(change.tab_name.is_none());
+        assert!(change.tab_slug.is_none());
+
+        // Card
+        assert_eq!(change.card_tab_name, Some(tab_name.to_string()));
+
+        // Previous Card
+        assert_eq!(change.previous_card_db_id, Some(card_id));
+        assert_eq!(
+            change.previous_card_description,
+            Some(card_name.to_string())
+        );
+        assert_eq!(change.previous_card_id, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_image_url, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_name, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_slug, Some(card_name.to_string()));
+
+        // Current Card
+        assert!(change.current_card_db_id.is_none());
+        assert!(change.current_card_description.is_none());
+        assert!(change.current_card_id.is_none());
+        assert!(change.current_card_image_url.is_none());
+        assert!(change.current_card_name.is_none());
+        assert!(change.current_card_slug.is_none());
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_get_card_modified_change(
+        #[future(awt)] empty_db: Connection,
+    ) -> Result<(), DatabaseError> {
+        let previous_activity_id = add_activity(&empty_db).await?;
+        let next_activity_id = add_activity(&empty_db).await?;
+
+        let tab_name = "fake_tab";
+        let tab = make_tab(tab_name);
+        let tab_id = add_and_assign_tab(&empty_db, &tab, previous_activity_id).await?;
+        let _ = assign_tab(&empty_db, next_activity_id, tab_id).await?;
+
+        let card_name = "fake_card";
+        let card = make_card(card_name, 1);
+        let card_id = add_and_assign_card(
+            &empty_db,
+            &card,
+            CardAssignmentInfo {
+                activity_id: previous_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        let mut new_card = card.clone();
+        new_card.description = "Updated description".into();
+        let new_card_id = add_and_assign_card(
+            &empty_db,
+            &new_card,
+            CardAssignmentInfo {
+                activity_id: next_activity_id,
+                tab_id,
+                section_pos: 1,
+                card_pos: 1,
+            },
+        )
+        .await?;
+
+        add_change(
+            &empty_db,
+            ChangeInfo {
+                activity_id: next_activity_id,
+                change_type: CardChange::Modified {
+                    tab_id: "()".into(),
+                    previous_card_index: 0,
+                    current_card_index: 0,
+                }
+                .as_str(),
+                previous_card_id: Some(card_id),
+                current_card_id: Some(new_card_id),
+                tab_id: None,
+            },
+        )
+        .await?;
+
+        let changes = get_roadmap_activity_changes(&empty_db, previous_activity_id).await?;
+
+        assert!(changes.is_empty());
+
+        let changes = get_roadmap_activity_changes(&empty_db, next_activity_id).await?;
+
+        assert_eq!(changes.len(), 1);
+
+        let change = &changes[0];
+
+        // Type
+        assert_eq!(
+            change.r#type.as_str(),
+            CardChange::Modified {
+                tab_id: "()".into(),
+                previous_card_index: 0,
+                current_card_index: 0,
+            }
+            .as_str()
+        );
+
+        // Tab
+        assert!(change.tab_db_id.is_none());
+        assert!(change.tab_id.is_none());
+        assert!(change.tab_name.is_none());
+        assert!(change.tab_slug.is_none());
+
+        // Card
+        assert_eq!(change.card_tab_name, Some(tab_name.to_string()));
+
+        // Previous Card
+        assert_eq!(change.previous_card_db_id, Some(card_id));
+        assert_eq!(
+            change.previous_card_description,
+            Some(card_name.to_string())
+        );
+        assert_eq!(change.previous_card_id, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_image_url, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_name, Some(card_name.to_string()));
+        assert_eq!(change.previous_card_slug, Some(card_name.to_string()));
+
+        // Current Card
+        assert_eq!(change.current_card_db_id, Some(new_card_id));
+        assert_eq!(
+            change.current_card_description,
+            Some("Updated description".to_string())
+        );
+        assert_eq!(change.current_card_id, Some(card_name.to_string()));
+        assert_eq!(change.current_card_image_url, Some(card_name.to_string()));
+        assert_eq!(change.current_card_name, Some(card_name.to_string()));
+        assert_eq!(change.current_card_slug, Some(card_name.to_string()));
+
+        Ok(())
+    }
 }

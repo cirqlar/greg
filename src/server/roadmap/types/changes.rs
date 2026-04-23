@@ -116,7 +116,7 @@ impl From<TabCardsChange> for RChange {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RDBChange {
     id: u32,
-    r#type: String,
+    pub r#type: String,
 
     pub previous_card_id: Option<String>,
     pub previous_card_name: Option<String>,
